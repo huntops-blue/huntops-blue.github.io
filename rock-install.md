@@ -1,7 +1,7 @@
 # Installing RockNSM
 This isn't a full walkthrough, it's meant to be a quick and dirty quick-start.
 
-If you already have ROCK installed and just need to understand getting test data in, skip to [the end](Getting-Data-Into-ROCK).
+If you already have ROCK installed and just need to understand getting test data in, skip to [the end](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock).
 
 # Preparation
 Do this to get started.
