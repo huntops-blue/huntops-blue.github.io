@@ -11,11 +11,11 @@ Do this to get started.
 # Installation
 Select the right hypervisor you're using.
 
-- [VMWare Fusion](VMWare-Fusion-Installation-Instructions)
-- [VirtualBox](VirtualBox-Installation-Instructions)
+- [VMWare Fusion](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#vmware-fusion-installation-instructions)
+- [VirtualBox](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#virtualbox-installation-instructions)
 
 ## VMWare Fusion Installation Instructions
-If you're using VirtualBox, go to those [instructions](VirtualBox-Installation-Instructions)
+If you're using VirtualBox, go to those [instructions](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#virtualbox-installation-instructions)
 
 1. Install VMWare Fusion
 1. Create a New virtual Machine
@@ -26,10 +26,10 @@ If you're using VirtualBox, go to those [instructions](VirtualBox-Installation-I
 1. Click on "Processors & Memory", set 4 processor cores and `12288` MB
 1. Click on "Add Device", add another Network Adapter
 1. Click on "Hard Disk", move it to `50.00` GB or more
-1. Move onto [deploying ROCK](Deploy-ROCK)
+1. Move onto [deploying ROCK](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#deploy-rock)
 
 ## VirtualBox Installation Instructions
-If you're using VMWare Fusion, go to those [instructions](VMWare-Fusion-Installation-Instructions)
+If you're using VMWare Fusion, go to those [instructions](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#vmware-fusion-installation-instructions)
 
 1. Install VirtualBox
 1. Create a New Virtual Machine, Type: "Linux", Version: "Red Hat (64-bit)"
@@ -42,7 +42,7 @@ If you're using VMWare Fusion, go to those [instructions](VMWare-Fusion-Installa
 1. Add one for HTTPS, Host IP: `127.0.0.1`, Host Port: `4443`, Guest IP: `10.0.2.15`, Guest Port: `443`
 1. Add one for SSH, Host IP: `127.0.0.1`, Host Port: `2222`, Guest IP: `10.0.2.15`, Guest Port: `22`
 1. In Network, click on Adapter 2, enable it, and set it to "Internal Network"
-1. Move onto [deploying ROCK](Deploy-ROCK)
+1. Move onto [deploying ROCK](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#deploy-rock)
 
 # Deploy ROCK
 Now that we've prepped the hypervisors, let's install ROCK.
