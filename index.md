@@ -14,7 +14,7 @@ Using the [replay packets](https://github.com/huntops-blue/huntops-blue.github.i
 ![](./images/2-20-20-1.png)
 
 Right out of the gate, Suricata is telling us something is amiss.  
-![](./images/2-20-2.png)
+![](./images/2-20-20-2.png)
 
 Let's pop over to the Discover tab and see what we can ferret out. We'll apply the `alert.signature exists` filter and add `destination.ip`, `source.ip`, `alert.signature`, and `alert.metadata.tag` and it looks like.
 
