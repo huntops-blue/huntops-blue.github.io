@@ -26,5 +26,11 @@ Let's pop over to the Discover tab and see what we can ferret out. We'll apply t
 
 Boom, we found the Trickbot TLS connections, but what about `wecan23`?
 
+*Note: As I dug through this, I found a lot of DNS traffic to blocklists (`cbl.abuseat.org`, `barracudacentral.org`, `uceprotect.net`, etc.). While the victim (or the pcap sampler) seemingly use these lists, I excluded this as it's not part of the infection.*
+
+As we see in the the table above, `10.0.100.185` seems to be infected. So let's filter in on that IP address in Kibana.
+
+![](./images/2-20-20-2.png)
+
 ---
 *Packets provided by [Malware Traffic Analysis](https://www.malware-traffic-analysis.net) - @malware_traffic*
