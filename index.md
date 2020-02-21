@@ -68,7 +68,9 @@ Like before, it's only Connection log stuff, so let's carve the PCAP between `10
 
 ![](./images/2-20-20-6.png)
 
-We'll stop here because obfuscating all of this data is exhausting. /cheers
+There was a lot of this kind of data being uploaded; feel free to explore it on your own and...obfuscating all of this data is exhausting.
+
+Until next time, cheers and happy hunting!
 
 ---
 *Packets provided by [Malware Traffic Analysis](https://www.malware-traffic-analysis.net) - @malware_traffic*
