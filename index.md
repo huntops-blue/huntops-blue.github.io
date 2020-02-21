@@ -11,15 +11,18 @@ RockNSM is an open source network security monitoring platform built with Zeek f
 - [gtag information stealer background](https://www.fireeye.com/blog/threat-research/2019/01/a-nasty-trick-from-credential-theft-malware-to-business-disruption.html)
 
 Right out of the gate, the Suricata dashboard is telling us something is amiss.  
+
 ![](./images/2-20-20-1.png)
 
 Let's pop over to the Discover tab and see what we can ferret out. We'll apply the `alert.signature exists` filter and add `destination.ip`, `source.ip`, `alert.signature`, and `alert.metadata.tag` and, pretty maids, all in a row.
 
-| Destination IP  | Source IP    | Signature                                         | Tag            |
-|-----------------|--------------|---------------------------------------------------|----------------|
-| 195.123.220.154 | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 12 | Banking_Trojan |
-| 185.65.202.240  | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 8  | Banking_Trojan |
-| 190.214.13.2    | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 11 | Banking_Trojan |
+| Destination IP  | Source IP    | Signature                                              | Tag            |
+|-----------------|--------------|--------------------------------------------------------|----------------|
+| 195.123.220.154 | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 12      | Banking_Trojan |
+| 185.65.202.240  | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 8       | Banking_Trojan |
+| 190.214.13.2    | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 11      | Banking_Trojan |
+| 104.20.16.242   | 10.0.100.185 | ET POLICY curl User-Agent Outbound                     | -              |
+| 104.20.16.242   | 10.0.100.185 | ET POLICY IP Check Domain (icanhazip. com in HTTP Host)| -              |
 
 Boom, we found the Trickbot TLS connections, but what about `wecan23`?
 
