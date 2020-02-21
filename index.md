@@ -41,7 +41,7 @@ Of interest, the connection between `10.0.100.185` and `192.3.124.40` is over po
 
 ![](./images/2-20-20-4.png)
 
-As we can see, the file name is `lastimg.png`, but the file type metadata has a magic number of `MZ`, which is a PE binary. Using `Export HTTP Objects` in Wireshark, we can see there are **2** "png" files called `lastimg.png` as well as `mini.png`. We'll carve those out and statically analyze them.
+As we can see, the file name is `lastimg.png`, but the file type metadata has a magic number of `MZ`, which is a PE binary. Using `Export HTTP Objects` in Wireshark, we can see there are 2 "png" files called `lastimg.png` as well as `mini.png`. We'll carve those out and statically analyze them.
 
 Using `exiftool`, we can see some interesting info, mainly that the original file was called `002.exe` and that the File Type is `Win32 EXE`, not an image (truncated).
 ```
@@ -58,7 +58,7 @@ Product Name                    : 002.exe
 ...
 ```
 
-Let's see what VirusTotal knows about these 2 files by searching their MD5 hashes (`489eef73a1a5880f644f3b60267db7e8` and `c1820b0685ea2c16a9da3efd2f3b58d9`)...**EVIL!**.
+Let's see what VirusTotal knows about these 2 files by searching their MD5 hashes [1](https://www.virustotal.com/gui/search/489eef73a1a5880f644f3b60267db7e8)[2](https://www.virustotal.com/gui/search/c1820b0685ea2c16a9da3efd2f3b58d9)...**EVIL!**.
 
 Back to Kibana and see what else is there. As before, let's get rid of our known bad and all we have left is `203[.]176[.]135[.]102`.
 
