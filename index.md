@@ -17,13 +17,13 @@ Right out of the gate, the Suricata dashboard is telling us something is amiss.
 
 Let's pop over to the Discover tab and see what we can ferret out. We'll apply the `alert.signature exists` filter and add `destination.ip`, `source.ip`, `alert.signature`, and `alert.metadata.tag` and, pretty maids, all in a row.
 
-| Destination IP  | Source IP    | Signature                                              | Tag            |
-|-----------------|--------------|--------------------------------------------------------|----------------|
-| 195[.]123[.]220[.]154 | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 12      | Banking_Trojan |
-| 185[.]65[.]202[.]240  | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 8       | Banking_Trojan |
-| 190[.]214[.]13[.]2    | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 11      | Banking_Trojan |
-| 104[.]20[.]16[.]242   | 10.0.100.185 | ET POLICY curl User-Agent Outbound                     | -              |
-| 104[.]20[.]16[.]242   | 10.0.100.185 | ET POLICY IP Check Domain (icanhazip[.]com in HTTP Host)| -              |
+| Destination IP  | Source IP    | Signature                                                      | Tag            |
+|-----------------|--------------|----------------------------------------------------------------|----------------|
+| 195[.]123[.]220[.]154 | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 12        | Banking_Trojan |
+| 185[.]65[.]202[.]240  | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 8         | Banking_Trojan |
+| 190[.]214[.]13[.]2    | 10.0.100.185 | ET CNC Feodo Tracker Reported CnC Server group 11        | Banking_Trojan |
+| 104[.]20[.]16[.]242   | 10.0.100.185 | ET POLICY curl User-Agent Outbound                       | -              |
+| 104[.]20[.]16[.]242   | 10.0.100.185 | ET POLICY IP Check Domain (icanhazip[.]com in HTTP Host) | -              |
 
 Boom, we found the Trickbot TLS connections, but what about `wecan23`?
 
@@ -37,7 +37,7 @@ Let's get rid of our known bad Destination IPs (above), the IP recon domains (`i
 
 ![](./images/2-20-20-3.png)
 
-Of interest, the connection between `10.0.100.185` and `192.3.124.40` is over port `80`, but there's not a corresponding HTTP Zeek log, so we'll have to use Docket to carve the PCAP and check it out in Wireshark.
+Of interest, the connection between `10.0.100.185` and `192[.]3[.]124[.]40` is over port `80`, but there's not a corresponding HTTP Zeek log, so we'll have to use Docket to carve the PCAP and check it out in Wireshark.
 
 ![](./images/2-20-20-4.png)
 
@@ -64,11 +64,23 @@ Back to Kibana and see what else is there. As before, let's get rid of our known
 
 ![](./images/2-20-20-5.png)
 
-Like before, it's only Connection log stuff, so let's carve the PCAP between `10.0.100.185` and `203[.]176[.]135[.]102` and see what we find in Wireshark, which appears to be posting host IDs, running processes, usernames, workstaion domain, etc. to a server `Cowboy`.
+Like before, it's only Connection log stuff, so let's carve the PCAP between `10.0.100.185` and `203[.]176[.]135[.]102` and see what we find in Wireshark, which appears to be posting host IDs, running processes, usernames, workstation domain, etc. to a server `Cowboy`.
 
 ![](./images/2-20-20-6.png)
 
 There was a lot of this kind of data being uploaded; feel free to explore it on your own and...obfuscating all of this data is exhausting.
+
+## Artifacts
+```
+203[.]176[.]135[.]102
+195[.]123[.]220[.]154
+185[.]65[.]202[.]240
+190[.]214[.]13[.]2
+192[.]3[.]124[.]40
+/wecan23/
+489eef73a1a5880f644f3b60267db7e
+c1820b0685ea2c16a9da3efd2f3b58d9
+```
 
 Until next time, cheers and happy hunting!
 
