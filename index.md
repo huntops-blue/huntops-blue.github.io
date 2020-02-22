@@ -137,6 +137,8 @@ xubiz8[.]cab
 /khogpfyc8n/215z9urlgz[.]php
 ```
 
+Until next time, cheers and happy hunting!
+
 # 2/21/2020 - Trickbot gtag wecan23 Infection
 - [Packets](https://www.malware-traffic-analysis.net/2020/02/19/index.html)
 - [Trickbot information stealer background](https://unit42.paloaltonetworks.com/trickbot-campaign-uses-fake-payroll-emails-to-conduct-phishing-attacks/)
