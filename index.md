@@ -53,7 +53,7 @@ Now that we have a few more hints to search through, specifically `qr12s8ygy1[.]
 
 *Of note, `settings-win.data.microsoft.com` appears to be a Microsoft botnet sinkhole, so while we can use some of the info, I'm going to remove this from our searches to eliminate traffic routes to chase. Additionally, I'm filtering out the OpenDNS traffic.*
 
-Moving along, let's make a Kibana data table to clean up our view a bit and we see `95[.]169[.]181[.]35` and `lcdixieeoe[.]com`. Let's use Docket to see what's in those packets.
+Moving along, let's make a Kibana data table to clean up our view a bit and we see `95[.]169[.]181[.]35` and `lcdixieeoe[.]com`, of note are those long URI's + an AVI file. Let's use Docket to see what's in those packets.
 
 ![](./images/2-27-20-6.png)
 
@@ -61,7 +61,7 @@ Hopping right into Exporting the HTTP objects, we see the `*.avi` files we obser
 
 ![](./images/2-27-20-7.png)
 
-In looking at the metadata for those "avi" files, we see that they're actually just Text files...let's explore!
+In looking at the metadata for those "avi" files, we see that they're actually just Text files.
 
 ```
 ======== B.avi
@@ -87,10 +87,11 @@ MIME Type                       : text/plain
 ...
 ```
 
-I poked and prodded on these files, but I'm not sure what they are...but I know they aren't normal media files. It looks like Base64 encoding, but I'm not sure what order they're supposed to be assembled in to decode. Either way, they're labled as a `.avi` and certainly aren't, so I'd put that in the suspect category.
+I poked and prodded on these files, but I'm not sure what they are...but I know they aren't normal media files. It looks like Base64 encoding, but I'm not sure what order they're supposed to be assembled in to decode. Either way, they have the `.avi` file extension and certainly aren't, so I'd put that in the suspect category.
 
 Extract of `B.avi`
 ```
+...
 p1kTy18hM3gcANzilINMVJWdUP4AbxDka8IVGBACN+HkZxzdIOi86DoUwglmVgw+BsGdGC3WLgE45BoaeDFcYxpoS8/HzXcwtxxa45Wiqordymiv5JlqzxHWS647gV2B0XpV1+A5h9PTPvxdfJV/CIAYGgCqFLzlxXF3znojgEGWHj/MwRbhIgMIKm9FDqEQEqxjDIv0SC+sqN9TxpQLNPCdqJwMTuQN2sfat464J1bh9LWzHwPwyZXErBH5+XmvEbIjOX3ptyRJOa4C+W0Cf6yOFLIPWas659a0x5tZAQs1VbwMjylWLlx6LA2Dmop1C4dwb+zH5SSJrYo5RKbc6DV1AmmRpeJ1NXkO30Z2Bq27U+h3uRUnMulPWSp1uTeLwc8LSFK49kTIaV0lwWNfDeb975aPmPac6kZP/5g5xgfB5/53/kC2KvHCbMUF8RotemD2ak+Lc0gzP7W/pcmbw/ZhxmdFJd5rPJz1lhGIOEZX6buFkcg3vjsBInd319vLO+ZSZmbU8m1ZryNsfLZ56tEvbafgCY1Jz/tP4UdKL6DZPyjCXC7oIEoCO3yn/yHOaFFQvOFizv2OnUPVW3ST+BN/TwkHUSZfE1+lKvjXJBsONeaiAa5ozLa2uI/ebx1caPFMjw0j62H23r0YFd0opsTw2ovlkvKcx3eoT
 ...
 ```
@@ -116,7 +117,7 @@ movi00db~
 P@X
 ```
 
-Trying a bit more on these files, 2 of these "avi" files end in `=`, so I am definitely leaning more towards Base64. The file that doesn't end in a `=`, I tried to append that to the top of the two files that do end in `=` and then run `base64 -D -i [file] -o [file]`, it created binary files (which seems like progress), but no luck in taking it apart.
+Trying a bit more on these files, 2 of these "avi" files end in `=` (`B.avi` and `jNjcj.avi`), so I am definitely leaning more towards Base64. The file that doesn't end in a `=` (`alSLK.avi`), I tried to append that to the top of the two files that do end in `=` and then run `base64 -D -i [file] -o [file]`, it created binary files (which seems like progress), but no luck in taking it apart.
 
 Malware Traffic Analysis noted another indicator that was identified through the analysis of the infected Word documents (`45[.]141[.]103[.]204` and `q68jaydon3t[.]com`), which we don't have. So while we see the traffic, it is all over TLS minus the initial DNS request so there's not much we can do for that. I'm adding it to the artifacts below, but this would only be "known bad" if it was found through analysis of the document.
 
@@ -129,10 +130,11 @@ Malware Traffic Analysis noted another indicator that was identified through the
 7e34d6e790707bcc862fd54c0129abfa
 40186e831cd2e9679ca725064d2ab0fb
 2b93fcafabab58a109fcbca4377cccda
+qr12s8ygy1[.]com
+lcdixieeoe[.]com
 q68jaydon3t[.]com (found by Malware Traffic Analysis)
-xubiz8[.]cab (not unique to this analyzed infection)
-/khogpfyc8n/215z9urlgz[.]php (not unique to this analyzed infection)
-qr12s8ygy1[.]com (not unique to this analyzed infection)
+xubiz8[.]cab
+/khogpfyc8n/215z9urlgz[.]php
 ```
 
 # 2/21/2020 - Trickbot gtag wecan23 Infection
