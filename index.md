@@ -121,7 +121,7 @@ P@X
 
 Trying a bit more on these files, 2 of these "avi" files end in `=` (`B.avi` and `jNjcj.avi`), so I am definitely leaning more towards Base64. The file that doesn't end in a `=` (`alSLK.avi`), I tried to append that to the top of the two files that do end in `=` and then run `base64 -D -i [file] -o [file]`, it created binary files (which seems like progress), but no luck in taking it apart. If anyone has any ideas here, feel free to reach out.
 
-Malware Traffic Analysis noted another indicator that was identified through the analysis of the infected Word documents (`45[.]141[.]103[.]204` and `q68jaydon3t[.]com`), which we don't have. So while we see the traffic, it is all over TLS minus the initial DNS request so there's not much we can do for that. I'm adding it to the artifacts below, but this would only be "known bad" if it was found through analysis of the document.
+Malware Traffic Analysis noted another indicator that was identified through the analysis of the infected Word documents (`45[.]141[.]103[.]204` and `q68jaydon3t[.]com`), which we don't have. So while we see the traffic, it is all over TLS minus the initial DNS request so there's not much we can do for that. The `ja3` nor `ja3s` hash was collected. I'm adding it to the artifacts below, but this would only be "known bad" if it was found through analysis of the document.
 
 ## Artifacts
 ```
