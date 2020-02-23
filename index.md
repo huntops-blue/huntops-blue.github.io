@@ -2,6 +2,8 @@ Running blog of finding evil with [RockNSM](https://rocknsm.io).
 
 This blog is highlight the methodologies for threat hunting ("thrunting") through network data. These are malicious PCAPs, so it's a bit like hunting for a needle in a needle stack, but these processes work for small samples to very very large ones.  
 
+Each blog post will start after using the [replaying packets](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock) process with the linked packets per post.
+
 RockNSM is an open source network security monitoring platform built with Zeek for protocol analysis, Suricata as an Intrusion Detection System (IDS), and the Elastic Stack for enrichment, storage, and visualization of network security data.  
 
 - [ROCK installation guide](./rock-install.md)
@@ -117,7 +119,7 @@ movi00db~
 P@X
 ```
 
-Trying a bit more on these files, 2 of these "avi" files end in `=` (`B.avi` and `jNjcj.avi`), so I am definitely leaning more towards Base64. The file that doesn't end in a `=` (`alSLK.avi`), I tried to append that to the top of the two files that do end in `=` and then run `base64 -D -i [file] -o [file]`, it created binary files (which seems like progress), but no luck in taking it apart.
+Trying a bit more on these files, 2 of these "avi" files end in `=` (`B.avi` and `jNjcj.avi`), so I am definitely leaning more towards Base64. The file that doesn't end in a `=` (`alSLK.avi`), I tried to append that to the top of the two files that do end in `=` and then run `base64 -D -i [file] -o [file]`, it created binary files (which seems like progress), but no luck in taking it apart. If anyone has any ideas here, feel free to reach out.
 
 Malware Traffic Analysis noted another indicator that was identified through the analysis of the infected Word documents (`45[.]141[.]103[.]204` and `q68jaydon3t[.]com`), which we don't have. So while we see the traffic, it is all over TLS minus the initial DNS request so there's not much we can do for that. I'm adding it to the artifacts below, but this would only be "known bad" if it was found through analysis of the document.
 
