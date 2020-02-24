@@ -139,6 +139,9 @@ xubiz8[.]cab
 /khogpfyc8n/215z9urlgz[.]php
 ```
 
+## Detection Logic
+Additional analysis, modeling, and signatures (KQL and Yara) on this software platform can be found [here](https://github.com/huntops-blue/detection-logic/blob/master/ursnif.md).
+
 Until next time, cheers and happy hunting!
 
 # 2/21/2020 - Trickbot gtag wecan23 Infection
