@@ -13,7 +13,7 @@ RockNSM is an open source network security monitoring platform built with Zeek f
 
 # 2/28/2020 - Qbot (Qakbot)
 - [Packets](http://malware-traffic-analysis.net/2020/01/29/index.html)
-- [Ursnif banking trojan background](https://blog.talosintelligence.com/2019/05/qakbot-levels-up-with-new-obfuscation.html)
+- [Qbot banking trojan background](https://blog.talosintelligence.com/2019/05/qakbot-levels-up-with-new-obfuscation.html)
 
 Unlike in previous posts, Qbot has not generated any Suricata rules, so we get to actually do some raw hunting!
 
@@ -56,7 +56,7 @@ total 464
 
 ![](./images/2-28-20-5.png)
 
-So, we'll Export the HTTP Object (or look at `HTTP-FQbqYF2UXkZ54fXJXi.exe`) and hash and collect the metadata from that file (truncated).
+So, we'll Export the HTTP Object (or looked at `HTTP-FQbqYF2UXkZ54fXJXi.exe`) and hash and collect the metadata from that file (truncated).
 
 ```
 ...
@@ -98,15 +98,15 @@ In keeping to my mantra of not "finding" things simply because they're on the IO
 68[.]1[.]115[.]106 (post infection SSL/TLS traffic)
 5[.]61[.]27[.]159
 103[.]91[.]92[.]1
-153[.]92[.]65[.]114 (found by Malware Traffic Analysis)
-54[.]36[.]108[.]120 (found by Malware Traffic Analysis)
 gaevietovp[.]mobi (post infection SSL/TLS traffic)
 alphaenergyeng[.]com
 bhatner[.]com
-pop3[.]arcor[.]de (found by Malware Traffic Analysis)
 c43367ebab80194fe69258ca9be4ac68 (444444.png - Qbot)
 275EBB5C0264DAC2D492EFD99F96C8AD (9312.zip)
 7dd50e112cd23734a310b90f6f44a7cd (gaevietovp ja3 fingerprint)
+153[.]92[.]65[.]114 (found by Malware Traffic Analysis)
+54[.]36[.]108[.]120 (found by Malware Traffic Analysis)
+pop3[.]arcor[.]de (found by Malware Traffic Analysis)
 ```
 
 Until next time, cheers and happy hunting!
