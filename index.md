@@ -28,7 +28,7 @@ Of note, I've added the [ja3](https://github.com/salesforce/ja3) field to assist
 
 ![](./images/2-28-20-1.png)
 
-Let's filter out the `9e10692f1b7f78228b2d4e424db3a98c` fingerprint (and various others that are part of assumed good for now - yahoo, linkedin, skype, etc.) help get our dataset down to a manageable level (over 300 events down to 95).
+Let's filter out the `9e10692f1b7f78228b2d4e424db3a98c` ja3 fingerprint (and various others that are part of assumed good for now - yahoo, linkedin, skype, etc.) help get our dataset down to a manageable level (over 300 events down to 95).
 
 Next, let's look at the largest number of TLS events, and that is `CN=gaevietovp.mobi,OU=Dobubaexo Boolkedm Bmuw,C=ES`, I've also added the `tls.validation_status` field and, as you can see, it is `unable to get local issuer certificate`. That's not necessarily bad, but it's different from the other TLS traffic samples we're looking at.
 
@@ -76,7 +76,7 @@ There's some interesting things here that we can use when we make some Yara sign
 - it was created on Jan 22, 2020
 - the original file name was `xsejan.dl`
 
-Furthermore, the hash of `c43367ebab80194fe69258ca9be4ac68` is loud and proud on [VirusTotal](https://www.virustotal.com/gui/file/56ee803fa903ab477f939b3894af6771aebf0138abe38ae8e3c41cf96bbb0f2a/detection) as being Qbot malware.
+Furthermore, the hash of `444444.png` (`c43367ebab80194fe69258ca9be4ac68`) is loud and proud on [VirusTotal](https://www.virustotal.com/gui/file/56ee803fa903ab477f939b3894af6771aebf0138abe38ae8e3c41cf96bbb0f2a/detection) as being Qbot malware.
 
 Okay, so we've got 3 indicators so far, what about the network systems that `444444.png` was downloaded from (`alphaenergyeng[.]com/wp-content/uploads/2020/01/ahead/444444[.]png` and `5[.]61[.]27[.]159`)? In digging into those 2, it looks like we've identified everything that talked to/from those systems.
 
@@ -84,9 +84,11 @@ Let's take a look at the URI structure from `alphaenergyeng[.]com/wp-content/upl
 
 ![](./images/2-28-20-6.png)
 
-I wasn't able to `9312.zip`, I have the packets, but there are hundreds of files in the TCP stream with the same name with various sizes. I'm not sure if it's an issue with my pcap or it's an obfuscation technique. That said, searching for the URL online yielded several analysis results [1](https://app.any.run/tasks/13853cd1-4b0f-45e8-bc49-56fafc5043fe/), [2](https://any.run/report/c483c9d30f122c6675b6d61656c27d51f6a3966dc547ff4f64d38e440278030c/13853cd1-4b0f-45e8-bc49-56fafc5043fe), [3](https://unit42.paloaltonetworks.com/tutorial-qakbot-infection/).
+I wasn't able to grab `9312.zip`, I have the packets, but there are hundreds of files in the TCP stream with the same name with various sizes. I'm not sure if it's an issue with my pcap or it's an obfuscation technique. That said, searching for the URL online yielded several analysis results [1](https://app.any.run/tasks/13853cd1-4b0f-45e8-bc49-56fafc5043fe/), [2](https://any.run/report/c483c9d30f122c6675b6d61656c27d51f6a3966dc547ff4f64d38e440278030c/13853cd1-4b0f-45e8-bc49-56fafc5043fe), [3](https://unit42.paloaltonetworks.com/tutorial-qakbot-infection/).
 
 ![](./images/2-28-20-7.png)
+
+In keeping to my mantra of not "finding" things simply because they're on the IOC list from Malware Traffic Analysis, beyond playing "whack-a-mole" with DNS entries, which I have done before, there wasn't much additional information I was able to find through raw hunting. I did want to showcase some indicators that Malware Traffic Analysis did highlight, but beyond knowing they were bad because it's in the IOC list, I don't think in good consciousness I can say I'd have found it on my own.
 
 ## Detection Logic
 [Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/qbot.md).
@@ -96,10 +98,13 @@ I wasn't able to `9312.zip`, I have the packets, but there are hundreds of files
 68[.]1[.]115[.]106 (post infection SSL/TLS traffic)
 5[.]61[.]27[.]159
 103[.]91[.]92[.]1
+153[.]92[.]65[.]114 (found by Malware Traffic Analysis)
+54[.]36[.]108[.]120 (found by Malware Traffic Analysis)
 gaevietovp[.]mobi (post infection SSL/TLS traffic)
 alphaenergyeng[.]com
 bhatner[.]com
-c43367ebab80194fe69258ca9be4ac68 (444444.png)
+pop3[.]arcor[.]de (found by Malware Traffic Analysis)
+c43367ebab80194fe69258ca9be4ac68 (444444.png - Qbot)
 275EBB5C0264DAC2D492EFD99F96C8AD (9312.zip)
 7dd50e112cd23734a310b90f6f44a7cd (gaevietovp ja3 fingerprint)
 ```
