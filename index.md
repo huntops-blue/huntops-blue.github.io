@@ -1,6 +1,6 @@
 Running blog of finding evil with [RockNSM](https://rocknsm.io).  
 
-This blog is highlight the methodologies for threat hunting ("thrunting") through network data. These are malicious PCAPs, so it's a bit like hunting for a needle in a needle stack, but these processes work for small samples to very very large ones.  
+This blog is highlight the methodologies for threat hunting ("thrunting") through network data. These are malicious PCAPs, so it's a bit like hunting for a needle in a needle stack, but these processes work for small samples to very very large ones. That said, I'm not going to "find" things that could only be identified if you knew what you were looking for. If I can find it, we'll showcase it, but if the C2 (as an example) looks like legitimate traffic, we'll list it as an artifact, but I'm not going to pretend that every packet observed is bad if I can't prove it.
 
 Each blog post will start after using the [replaying packets](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock) process with the linked packets per post.
 
@@ -34,17 +34,29 @@ Next, let's look at the largest number of TLS events, and that is `CN=gaevietovp
 
 ![](./images/2-28-20-2.png)
 
-From here we have some indicators (`10.1.29.101`, `68[.]1[.]115[.]106`, and `gaevietovp[.]mobi`) that we can take and search through some traffic where we can see more than metadata, however, the only traffic for these hosts was over TLS, so we've exhausted the route and can list this as a good find.
+From here we have some indicators (`10.1.29.101`, `68[.]1[.]115[.]106`, and `gaevietovp[.]mobi`) that we can take and search through some traffic where we can see more than metadata, however, the only traffic for these hosts was over TLS, so we've exhausted the route and can list this as a good find based on the other information we collected above.
 
 Next, let's remove our filters and check out the HTTP log and see if there's anything that's unencrypted that can we dig through. We'll again eliminate the assumed good (Microsoft, Windows Update, Symantec, etc.), and check out the `url.orginal` and `http.resp_mime_types`. While the filename of `4444444.png` is a bit suspect, the fact that it has a file extension of a PNG file, but it has a mime type of `application/x-dosexec` is a big red flag.
 
 ![](./images/2-28-20-3.png)
 
- Let's carve that PCAP with Docket and see what we've got...following the TCP stream doesn't look very good /smh
+ We've got a few options to analyze this file, we can use Docket and carve it from PCAP or we can leverage the file extraction features of Zeek and just grab it right off the sensor.
 
-![](./images/2-28-20-4.png)
+ Filtering on the `files` dataset, we can see what the name of the file is that is on the sensor when we look at the `files.extracted` field - `HTTP-FQbqYF2UXkZ54fXJXi.exe`. Extracted files are located in `/data/zeek/logs/extract_files/`.
 
-So, we'll Export the HTTP Object and hash and collect the metadata from that file (truncated).
+ ![](./images/2-28-20-4.png)
+
+ ```
+ ll /data/zeek/logs/extract_files/
+total 464
+-rw-r--r--. 1 zeek zeek 475136 Feb 25 16:38 HTTP-FQbqYF2UXkZ54fXJXi.exe
+```
+
+ If we want to carve that PCAP with Docket, we can do that too...following the TCP stream doesn't look very good /smh
+
+![](./images/2-28-20-5.png)
+
+So, we'll Export the HTTP Object (or look at `HTTP-FQbqYF2UXkZ54fXJXi.exe`) and hash and collect the metadata from that file (truncated).
 
 ```
 ...
@@ -70,11 +82,14 @@ Okay, so we've got 3 indicators so far, what about the network systems that `444
 
 Let's take a look at the URI structure from `alphaenergyeng[.]com/wp-content/uploads/2020/01/ahead/444444[.]png` and see if we have any more hits on systems using `wp-content/uploads/2020/01/ahead/`, disco another new hit with 2 new indicators (`103[.]91[.]92[.]1` and `bhatner[.]com/wp-content/uploads/2020/01/ahead/9312[.]zip`.
 
-![](./images/2-28-20-5.png)
+![](./images/2-28-20-6.png)
 
 I wasn't able to `9312.zip`, I have the packets, but there are hundreds of files in the TCP stream with the same name with various sizes. I'm not sure if it's an issue with my pcap or it's an obfuscation technique. That said, searching for the URL online yielded several analysis results [1](https://app.any.run/tasks/13853cd1-4b0f-45e8-bc49-56fafc5043fe/), [2](https://any.run/report/c483c9d30f122c6675b6d61656c27d51f6a3966dc547ff4f64d38e440278030c/13853cd1-4b0f-45e8-bc49-56fafc5043fe), [3](https://unit42.paloaltonetworks.com/tutorial-qakbot-infection/).
 
-![](./images/2-28-20-6.png)
+![](./images/2-28-20-7.png)
+
+## Detection Logic
+[Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/qbot.md).
 
 ## Artifacts
 ```
@@ -85,8 +100,11 @@ gaevietovp[.]mobi (post infection SSL/TLS traffic)
 alphaenergyeng[.]com
 bhatner[.]com
 c43367ebab80194fe69258ca9be4ac68 (444444.png)
+275EBB5C0264DAC2D492EFD99F96C8AD (9312.zip)
 7dd50e112cd23734a310b90f6f44a7cd (gaevietovp ja3 fingerprint)
 ```
+
+Until next time, cheers and happy hunting!
 
 # 2/24/2020 - Ursnif
 - [Packets](http://malware-traffic-analysis.net/2020/02/11/index.html)
@@ -200,6 +218,9 @@ Trying a bit more on these files, 2 of these "avi" files end in `=` (`B.avi` and
 
 Malware Traffic Analysis noted another indicator that was identified through the analysis of the infected Word documents (`45[.]141[.]103[.]204` and `q68jaydon3t[.]com`), which we don't have. So while we see the traffic, it is all over TLS minus the initial DNS request so there's not much we can do for that. The `ja3` nor `ja3s` hash was collected. I'm adding it to the artifacts below, but this would only be "known bad" if it was found through analysis of the document.
 
+## Detection Logic
+[Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/ursnif.md).
+
 ## Artifacts
 ```
 194[.]61[.]2[.]16
@@ -215,9 +236,6 @@ q68jaydon3t[.]com (found by Malware Traffic Analysis)
 xubiz8[.]cab
 /khogpfyc8n/215z9urlgz[.]php
 ```
-
-## Detection Logic
-Additional analysis, modeling, and signatures (KQL and Yara) on this software platform can be found [here](https://github.com/huntops-blue/detection-logic/blob/master/ursnif.md).
 
 Until next time, cheers and happy hunting!
 
