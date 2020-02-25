@@ -11,9 +11,86 @@ RockNSM is an open source network security monitoring platform built with Zeek f
 - [Replaying Packets](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock)
 - [Twitter @andythevariable](https://twitter.com/andythevariable)
 
+# 2/28/2020 - Qbot (Qakbot)
+- [Packets](http://malware-traffic-analysis.net/2020/01/29/index.html)
+- [Ursnif banking trojan background](https://blog.talosintelligence.com/2019/05/qakbot-levels-up-with-new-obfuscation.html)
+
+Unlike in previous posts, Qbot has not generated any Suricata rules, so we get to actually do some raw hunting!
+
+Personally, I like to start looking at TLS traffic as it forces me to look hard at metadata instead of relying on the contents of packets. We'll move on to packets later, but let's start further down the attacker lifecycle and see if we can work our way backwards.
+
+Of note, I've added the [ja3](https://github.com/salesforce/ja3) field to assist with this larger dataset. JA3 is a SSL/TLS client fingerprint that allows us to identify scale good (or bad) client/server TLS connections irrespective of the domain that is used. As you can see, two domains have the same `ja3` fingerprint but different destination IP addresses and domains. This will help in eliminating traffic to chase by filtering out (or on) that fingerprint instead of every domain/IP combination that could be using it.
+
+| Source IP  | Destination IP    | tls.client.ja3 | tls.server.subject |
+|-----------------|--------------|----------------------------------------------------------------|----------------|
+| 10.1.29.101 | 13[.]107[.]9[.]254 | 9e10692f1b7f78228b2d4e424db3a98c | CN=*[.]msedge[.]net |
+| 10.1.29.101 | 204[.]79[.]197[.]200 | 9e10692f1b7f78228b2d4e424db3a98c | CN=www[.]bing[.]com |
+
+![](./images/2-28-20-1.png)
+
+Let's filter out the `9e10692f1b7f78228b2d4e424db3a98c` fingerprint (and various others that are part of assumed good for now - yahoo, linkedin, skype, etc.) help get our dataset down to a manageable level (over 300 events down to 95).
+
+Next, let's look at the largest number of TLS events, and that is `CN=gaevietovp.mobi,OU=Dobubaexo Boolkedm Bmuw,C=ES`, I've also added the `tls.validation_status` field and, as you can see, it is `unable to get local issuer certificate`. That's not necessarily bad, but it's different from the other TLS traffic samples we're looking at.
+
+![](./images/2-28-20-2.png)
+
+From here we have some indicators (`10.1.29.101`, `68[.]1[.]115[.]106`, and `gaevietovp[.]mobi`) that we can take and search through some traffic where we can see more than metadata, however, the only traffic for these hosts was over TLS, so we've exhausted the route and can list this as a good find.
+
+Next, let's remove our filters and check out the HTTP log and see if there's anything that's unencrypted that can we dig through. We'll again eliminate the assumed good (Microsoft, Windows Update, Symantec, etc.), and check out the `url.orginal` and `http.resp_mime_types`. While the filename of `4444444.png` is a bit suspect, the fact that it has a file extension of a PNG file, but it has a mime type of `application/x-dosexec` is a big red flag.
+
+![](./images/2-28-20-3.png)
+
+ Let's carve that PCAP with Docket and see what we've got...following the TCP stream doesn't look very good /smh
+
+![](./images/2-28-20-4.png)
+
+So, we'll Export the HTTP Object and hash and collect the metadata from that file (truncated).
+
+```
+...
+File Name                       : 444444.png
+File Type                       : Win32 EXE
+File Type Extension             : exe
+Time Stamp                      : 2020:01:22 15:38:11-06:00
+PE Type                         : PE32
+Internal Name                   : xseja
+Original File Name              : xsejan.dl
+Product Name                    : Xseja
+...
+```
+
+There's some interesting things here that we can use when we make some Yara signatures in the Detection-Logic section below:
+- it's not a PNG file, it's a Win32 PE file
+- it was created on Jan 22, 2020
+- the original file name was `xsejan.dl`
+
+Furthermore, the hash of `c43367ebab80194fe69258ca9be4ac68` is loud and proud on [VirusTotal](https://www.virustotal.com/gui/file/56ee803fa903ab477f939b3894af6771aebf0138abe38ae8e3c41cf96bbb0f2a/detection) as being Qbot malware.
+
+Okay, so we've got 3 indicators so far, what about the network systems that `444444.png` was downloaded from (`alphaenergyeng[.]com/wp-content/uploads/2020/01/ahead/444444[.]png` and `5[.]61[.]27[.]159`)? In digging into those 2, it looks like we've identified everything that talked to/from those systems.
+
+Let's take a look at the URI structure from `alphaenergyeng[.]com/wp-content/uploads/2020/01/ahead/444444[.]png` and see if we have any more hits on systems using `wp-content/uploads/2020/01/ahead/`, disco another new hit with 2 new indicators (`103[.]91[.]92[.]1` and `bhatner[.]com/wp-content/uploads/2020/01/ahead/9312[.]zip`.
+
+![](./images/2-28-20-5.png)
+
+I wasn't able to `9312.zip`, I have the packets, but there are hundreds of files in the TCP stream with the same name with various sizes. I'm not sure if it's an issue with my pcap or it's an obfuscation technique. That said, searching for the URL online yielded several analysis results [1](https://app.any.run/tasks/13853cd1-4b0f-45e8-bc49-56fafc5043fe/), [2](https://any.run/report/c483c9d30f122c6675b6d61656c27d51f6a3966dc547ff4f64d38e440278030c/13853cd1-4b0f-45e8-bc49-56fafc5043fe), [3](https://unit42.paloaltonetworks.com/tutorial-qakbot-infection/).
+
+![](./images/2-28-20-6.png)
+
+## Artifacts
+```
+68[.]1[.]115[.]106 (post infection SSL/TLS traffic)
+5[.]61[.]27[.]159
+103[.]91[.]92[.]1
+gaevietovp[.]mobi (post infection SSL/TLS traffic)
+alphaenergyeng[.]com
+bhatner[.]com
+c43367ebab80194fe69258ca9be4ac68 (444444.png)
+7dd50e112cd23734a310b90f6f44a7cd (gaevietovp ja3 fingerprint)
+```
+
 # 2/24/2020 - Ursnif
 - [Packets](http://malware-traffic-analysis.net/2020/02/11/index.html)
-- [Ursnif banking trojan background](https://attack.mitre.org/software/S0386/)
+- [Qbot banking trojan background](https://attack.mitre.org/software/S0386/)
 
 Suricata has picked up some easy things to get started on, so let's start there.
 
