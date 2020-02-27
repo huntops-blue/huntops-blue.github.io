@@ -96,14 +96,16 @@ In keeping to my mantra of not "finding" things simply because they're on the IO
 ## Artifacts
 ```
 68[.]1[.]115[.]106 (post infection SSL/TLS traffic)
-5[.]61[.]27[.]159
-103[.]91[.]92[.]1
 gaevietovp[.]mobi (post infection SSL/TLS traffic)
-alphaenergyeng[.]com
-bhatner[.]com
-c43367ebab80194fe69258ca9be4ac68 (444444.png - Qbot)
-275EBB5C0264DAC2D492EFD99F96C8AD (9312.zip)
-7dd50e112cd23734a310b90f6f44a7cd (gaevietovp ja3 fingerprint)
+7dd50e112cd23734a310b90f6f44a7cd (post infection ja3 fingerprint)
+5[.]61[.]27[.]159 (HTTP request for Qbot PE)
+alphaenergyeng[.]com (HTTP request for Qbot PE)
+/wp-content/uploads/2020/01/ahead/444444.png (HTTP request for Qbot PE)
+c43367ebab80194fe69258ca9be4ac68 (444444.png - Qbot PE)
+103[.]91[.]92[.]1 (HTTP request for Qbot archive)
+bhatner[.]com (HTTP request for Qbot archive)
+/wp-content/uploads/2020/01/ahead/9312.zip (HTTP request for Qbot archive)
+275EBB5C0264DAC2D492EFD99F96C8AD (9312.zip - Qbot archive)
 153[.]92[.]65[.]114 (found by Malware Traffic Analysis)
 54[.]36[.]108[.]120 (found by Malware Traffic Analysis)
 pop3[.]arcor[.]de (found by Malware Traffic Analysis)
