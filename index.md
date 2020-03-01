@@ -1,6 +1,6 @@
 Running blog of finding evil with [RockNSM](https://rocknsm.io).  
 
-This blog is highlight the methodologies for threat hunting ("thrunting") through network data. These are malicious PCAPs, so it's a bit like hunting for a needle in a needle stack, but these processes work for small samples to very very large ones.  
+This blog is highlight the methodologies for threat hunting ("thrunting") through network data. These are malicious PCAPs, so it's a bit like hunting for a needle in a needle stack, but these processes work for small samples to very very large ones. That said, I'm not going to "find" things that could only be identified if you knew what you were looking for. If I can find it, we'll showcase it, but if the C2 (as an example) looks like legitimate traffic, we'll list it as an artifact, but I'm not going to pretend that every packet observed is bad if I can't prove it.
 
 Each blog post will start after using the [replaying packets](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock) process with the linked packets per post.
 
@@ -11,9 +11,114 @@ RockNSM is an open source network security monitoring platform built with Zeek f
 - [Replaying Packets](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock)
 - [Twitter @andythevariable](https://twitter.com/andythevariable)
 
+# 2/28/2020 - Qbot (Qakbot)
+- [Packets](http://malware-traffic-analysis.net/2020/01/29/index.html)
+- [Qbot banking trojan background](https://blog.talosintelligence.com/2019/05/qakbot-levels-up-with-new-obfuscation.html)
+
+Unlike in previous posts, Qbot has not generated any Suricata rules, so we get to actually do some raw hunting!
+
+Personally, I like to start looking at TLS traffic as it forces me to look hard at metadata instead of relying on the contents of packets. We'll move on to packets later, but let's start further down the attacker lifecycle and see if we can work our way backwards.
+
+Of note, I've added the [ja3](https://github.com/salesforce/ja3) field to assist with this larger dataset. JA3 is a SSL/TLS client fingerprint that allows us to identify scale good (or bad) client/server TLS connections irrespective of the domain that is used. As you can see, two domains have the same `ja3` fingerprint but different destination IP addresses and domains. This will help in eliminating traffic to chase by filtering out (or on) that fingerprint instead of every domain/IP combination that could be using it.
+
+| Source IP  | Destination IP    | tls.client.ja3 | tls.server.subject |
+|-----------------|--------------|----------------------------------------------------------------|----------------|
+| 10.1.29.101 | 13[.]107[.]9[.]254 | 9e10692f1b7f78228b2d4e424db3a98c | CN=*[.]msedge[.]net |
+| 10.1.29.101 | 204[.]79[.]197[.]200 | 9e10692f1b7f78228b2d4e424db3a98c | CN=www[.]bing[.]com |
+
+![](./images/2-28-20-1.png)
+
+Let's filter out the `9e10692f1b7f78228b2d4e424db3a98c` ja3 fingerprint (and various others that are part of assumed good for now - yahoo, linkedin, skype, etc.) help get our dataset down to a manageable level (over 300 events down to 95).
+
+Next, let's look at the largest number of TLS events, and that is `CN=gaevietovp.mobi,OU=Dobubaexo Boolkedm Bmuw,C=ES`, I've also added the `tls.validation_status` field and, as you can see, it is `unable to get local issuer certificate`. That's not necessarily bad, but it's different from the other TLS traffic samples we're looking at.
+
+![](./images/2-28-20-2.png)
+
+From here we have some indicators (`10.1.29.101`, `68[.]1[.]115[.]106`, and `gaevietovp[.]mobi`) that we can take and search through some traffic where we can see more than metadata, however, the only traffic for these hosts was over TLS, so we've exhausted the route and can list this as a good find based on the other information we collected above.
+
+Next, let's remove our filters and check out the HTTP log and see if there's anything that's unencrypted that can we dig through. We'll again eliminate the assumed good (Microsoft, Windows Update, Symantec, etc.), and check out the `url.orginal` and `http.resp_mime_types`. While the filename of `4444444.png` is a bit suspect, the fact that it has a file extension of a PNG file, but it has a mime type of `application/x-dosexec` is a big red flag.
+
+![](./images/2-28-20-3.png)
+
+ We've got a few options to analyze this file, we can use Docket and carve it from PCAP or we can leverage the file extraction features of Zeek and just grab it right off the sensor.
+
+ Filtering on the `files` dataset, we can see what the name of the file is that is on the sensor when we look at the `files.extracted` field - `HTTP-FQbqYF2UXkZ54fXJXi.exe`. Extracted files are located in `/data/zeek/logs/extract_files/`.
+
+ ![](./images/2-28-20-4.png)
+
+ ```
+ ll /data/zeek/logs/extract_files/
+total 464
+-rw-r--r--. 1 zeek zeek 475136 Feb 25 16:38 HTTP-FQbqYF2UXkZ54fXJXi.exe
+```
+
+ If we want to carve that PCAP with Docket, we can do that too...following the TCP stream doesn't look very good /smh
+
+![](./images/2-28-20-5.png)
+
+So, we'll Export the HTTP Object (or looked at `HTTP-FQbqYF2UXkZ54fXJXi.exe`) and hash and collect the metadata from that file (truncated).
+
+```
+...
+File Name                       : 444444.png
+File Type                       : Win32 EXE
+File Type Extension             : exe
+Time Stamp                      : 2020:01:22 15:38:11-06:00
+PE Type                         : PE32
+Internal Name                   : xseja
+Original File Name              : xsejan.dl
+Product Name                    : Xseja
+...
+```
+
+There's some interesting things here that we can use when we make some Yara signatures in the Detection-Logic section below:
+- it's not a PNG file, it's a Win32 PE file
+- it was created on Jan 22, 2020
+- the original file name was `xsejan.dl`
+
+Furthermore, the hash of `444444.png` (`c43367ebab80194fe69258ca9be4ac68`) is loud and proud on [VirusTotal](https://www.virustotal.com/gui/file/56ee803fa903ab477f939b3894af6771aebf0138abe38ae8e3c41cf96bbb0f2a/detection) as being Qbot malware.
+
+Okay, so we've got 3 indicators so far, what about the network systems that `444444.png` was downloaded from (`alphaenergyeng[.]com/wp-content/uploads/2020/01/ahead/444444[.]png` and `5[.]61[.]27[.]159`)? In digging into those 2, it looks like we've identified everything that talked to/from those systems.
+
+Let's take a look at the URI structure from `alphaenergyeng[.]com/wp-content/uploads/2020/01/ahead/444444[.]png` and see if we have any more hits on systems using `wp-content/uploads/2020/01/ahead/`, disco another new hit with 2 new indicators (`103[.]91[.]92[.]1` and `bhatner[.]com/wp-content/uploads/2020/01/ahead/9312[.]zip`.
+
+![](./images/2-28-20-6.png)
+
+I wasn't able to grab `9312.zip`, I have the packets, but there are hundreds of files in the TCP stream with the same name with various sizes. I'm not sure if it's an issue with my pcap or it's an obfuscation technique. That said, searching for the URL online yielded several analysis results [1](https://app.any.run/tasks/13853cd1-4b0f-45e8-bc49-56fafc5043fe/), [2](https://any.run/report/c483c9d30f122c6675b6d61656c27d51f6a3966dc547ff4f64d38e440278030c/13853cd1-4b0f-45e8-bc49-56fafc5043fe), [3](https://unit42.paloaltonetworks.com/tutorial-qakbot-infection/).
+
+![](./images/2-28-20-7.png)
+
+In keeping to my mantra of not "finding" things simply because they're on the IOC list from Malware Traffic Analysis, beyond playing "whack-a-mole" with DNS entries, which I have done before, there wasn't much additional information I was able to find through raw hunting. I did want to showcase some indicators that Malware Traffic Analysis did highlight, but beyond knowing they were bad because it's in the IOC list, I don't think in good consciousness I can say I'd have found it on my own.
+
+## Detection Logic
+[Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/qbot.md).
+
+![](./images/2-28-20-8.png)
+
+## Artifacts
+```
+68[.]1[.]115[.]106 (post infection SSL/TLS traffic)
+gaevietovp[.]mobi (post infection SSL/TLS traffic)
+7dd50e112cd23734a310b90f6f44a7cd (post infection ja3 fingerprint)
+7c02dbae662670040c7af9bd15fb7e2f (post infection ja3s fingerprint)
+5[.]61[.]27[.]159 (HTTP request for Qbot PE)
+alphaenergyeng[.]com (HTTP request for Qbot PE)
+/wp-content/uploads/2020/01/ahead/444444.png (HTTP request for Qbot PE)
+c43367ebab80194fe69258ca9be4ac68 (444444.png - Qbot PE)
+103[.]91[.]92[.]1 (HTTP request for Qbot archive)
+bhatner[.]com (HTTP request for Qbot archive)
+/wp-content/uploads/2020/01/ahead/9312.zip (HTTP request for Qbot archive)
+275ebb5c0264dac2d492efd99f96c8ad (9312.zip - Qbot archive)
+153[.]92[.]65[.]114 (found by Malware Traffic Analysis)
+54[.]36[.]108[.]120 (found by Malware Traffic Analysis)
+pop3[.]arcor[.]de (found by Malware Traffic Analysis)
+```
+
+Until next time, cheers and happy hunting!
+
 # 2/24/2020 - Ursnif
 - [Packets](http://malware-traffic-analysis.net/2020/02/11/index.html)
-- [Ursnif banking trojan background](https://attack.mitre.org/software/S0386/)
+- [Qbot banking trojan background](https://attack.mitre.org/software/S0386/)
 
 Suricata has picked up some easy things to get started on, so let's start there.
 
@@ -123,6 +228,9 @@ Trying a bit more on these files, 2 of these "avi" files end in `=` (`B.avi` and
 
 Malware Traffic Analysis noted another indicator that was identified through the analysis of the infected Word documents (`45[.]141[.]103[.]204` and `q68jaydon3t[.]com`), which we don't have. So while we see the traffic, it is all over TLS minus the initial DNS request so there's not much we can do for that. The `ja3` nor `ja3s` hash was collected. I'm adding it to the artifacts below, but this would only be "known bad" if it was found through analysis of the document.
 
+## Detection Logic
+[Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/ursnif.md).
+
 ## Artifacts
 ```
 194[.]61[.]2[.]16
@@ -138,9 +246,6 @@ q68jaydon3t[.]com (found by Malware Traffic Analysis)
 xubiz8[.]cab
 /khogpfyc8n/215z9urlgz[.]php
 ```
-
-## Detection Logic
-Additional analysis, modeling, and signatures (KQL and Yara) on this software platform can be found [here](https://github.com/huntops-blue/detection-logic/blob/master/ursnif.md).
 
 Until next time, cheers and happy hunting!
 
