@@ -73,7 +73,7 @@ In the home directory of the user you created during the installation, there is 
 
 Browse to `https://ROCK_IP_ADDRESS` and use the Kibana credentials to log in.
 
-Pop over to the [blog](https://hunbtops.blue) for pcap examples in ROCK.
+Pop over to the [blog](https://huntops.blue) for pcap examples in ROCK.
 
 # Troubleshooting
 If you run into issues, feel free to check out the [ROCK documentation](https://docs.rocknsm.io), the [ROCK community page](https://community.rocknsm.io), or the [ROCK Github page](https://github.com/rocknsm/rock).
