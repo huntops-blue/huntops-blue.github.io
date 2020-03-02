@@ -6,7 +6,8 @@ If you already have ROCK installed and just need to understand getting test data
 # Preparation
 Do this to get started.
 1. Download the latest [ROCK ISO](https://download.rocknsm.io/isos/stable/)
-1. Download [VMWare Fusion](https://www.vmware.com/products/fusion/fusion-evaluation.html) (paid) **or** [VirtualBox](https://www.virtualbox.org/wiki/Downloads) (free)
+1. Download a hypervisor (I'll walk through VMWare Fusion and VirtualBox, but there are many options)
+ - [VMWare Fusion](https://www.vmware.com/products/fusion/fusion-evaluation.html) (paid) **or** [VirtualBox](https://www.virtualbox.org/wiki/Downloads) (free)
 
 # Installation
 Select the right hypervisor you're using.
@@ -63,11 +64,16 @@ Download some malicious pcap. I like to use [Malware Traffic Analysis](https://w
 Example:
 ```
 curl -OL [malware file.pcap.zip]
-unzip [file.pcap.zip]
+unzip [file.pcap.zip] (password: infected)
 sudo tcpreplay -t -i [monitor interface] [file.pcap]
 ```
 
-Pop over to the blog for pcap examples in ROCK.
+# Logging into ROCK
+In the home directory of the user you created during the installation, there is a file called `KIBANA_CREDENTIALS.txt`. In there you'll find your username and passphrase.
+
+Browse to `https://ROCK_IP_ADDRESS` and use the Kibana credentials to log in.
+
+Pop over to the [blog](https://hunbtops.blue) for pcap examples in ROCK.
 
 # Troubleshooting
 If you run into issues, feel free to check out the [ROCK documentation](https://docs.rocknsm.io), the [ROCK community page](https://community.rocknsm.io), or the [ROCK Github page](https://github.com/rocknsm/rock).
