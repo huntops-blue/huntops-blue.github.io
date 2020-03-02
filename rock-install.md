@@ -6,7 +6,8 @@ If you already have ROCK installed and just need to understand getting test data
 # Preparation
 Do this to get started.
 1. Download the latest [ROCK ISO](https://download.rocknsm.io/isos/stable/)
-1. Download [VMWare Fusion](https://www.vmware.com/products/fusion/fusion-evaluation.html) (paid) **or** [VirtualBox](https://www.virtualbox.org/wiki/Downloads) (free)
+1. Download a hypervisor (I'll walk through VMWare Fusion and VirtualBox, but there are many options)
+ - [VMWare Fusion](https://www.vmware.com/products/fusion/fusion-evaluation.html) (paid) **or** [VirtualBox](https://www.virtualbox.org/wiki/Downloads) (free)
 
 # Installation
 Select the right hypervisor you're using.
