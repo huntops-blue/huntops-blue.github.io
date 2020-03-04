@@ -11,6 +11,119 @@ RockNSM is an open source network security monitoring platform built with Zeek f
 - [Replaying Packets](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock)
 - [Twitter @andythevariable](https://twitter.com/andythevariable)
 
+# 3/6/2020 - Trickbot
+- [Packets](http://malware-traffic-analysis.net/2020/02/25/index.html)
+- [Trickbot information stealer background](https://unit42.paloaltonetworks.com/trickbot-campaign-uses-fake-payroll-emails-to-conduct-phishing-attacks/)
+- [gtag information stealer background](https://www.fireeye.com/blog/threat-research/2019/01/a-nasty-trick-from-credential-theft-malware-to-business-disruption.html)
+
+We've done a Trickbot analysis before, but when I started poking around on this one, I found some indicators that weren't being detected by Suricata and in pulling that thread, found indicators that hadn't been previously reported anywhere, to include the binaries that I've carved from PCAP. By the publish date, there could be others who've found this, but as I'm starting this post (3/3/20), these haven't been identified elsewhere.
+
+*Note: I changed the way I replayed my traffic this time by removing the `-t` flag from `tcpreplay`. While this takes much longer (2 1/2 hours in this specific case), but it makes for a better view of the event pattern of life.*
+
+Let's start with the known knowns - Suricata.
+
+![](./images/3-8-20-1.png)
+
+*Note: Curl, `myexternalip[.]com`, and `ipecho[.]net` are called out by Suricata, we know they're bad because these PCAPs are bad and we've seen them used in other Trickbot infections, but we're not going to sandbag and add them as "known bad" unless we can connect it to malicious traffic.*
+
+Walking through the image, we have `ET HUNTING GENERIC SUSPICIOUS POST to Dotted Quad with Fake Browser 1` as the highest. This signature is seen with a lot of trojans and is more of an "this event could be interesting" vs. a smoking gun. Applying this alert as a filter, we see the host `10.22.33.145` is the source - which we can see (with no filters) makes up for 232 events, so I'm going to lean to say `10.22.33.145` is a good host to focus on.
+
+The next alert is `ET CNC Feodo Tracker Reported CnC Server group x`, there are several of those for different "groups". Filtering on them individually, it's also `10.22.33.145` as the infected host. With the volume here, I'm going to pop over and make a simple data table with `destination.ip`, `source.ip`, and `alert.signature`.
+
+Of note, there are 4 ports involved here, `447` and `449` look pretty uniform across the alerts, but `443` and `8082`, while hitting the same signature, appear to be different stages in the event, so we'll take note of those and poke at those later.
+
+| Destination IP  | Source IP    | Signature                                                      | Tag            |
+|-----------------|--------------|----------------------------------------------------------------|----------------|
+| 186[.]71[.]150[.]23 | 10.22.33.145 | ET CNC Feodo Tracker Reported CnC Server group 10        | Banking_Trojan |
+| 190[.]214[.]13[.]2 | 10.22.33.145 | ET CNC Feodo Tracker Reported CnC Server group 12        | Banking_Trojan |
+| 195[.]133[.]145[.]31 | 10.22.33.145 | ET CNC Feodo Tracker Reported CnC Server group 13        | Banking_Trojan |
+| 5[.]2[.]77[.]18 | 10.22.33.145 | ET CNC Feodo Tracker Reported CnC Server group 19        | Banking_Trojan |
+| 85[.]143[.]216[.]206 | 10.22.33.145 | ET CNC Feodo Tracker Reported CnC Server group 23        | Banking_Trojan |
+| 66[.]85[.]173[.]20 | 10.22.33.145 | ET CNC Feodo Tracker Reported CnC Server group 20        | Banking_Trojan |
+| 93[.]189[.]41[.]185 | 10.22.33.145 | ET CNC Feodo Tracker Reported CnC Server group 25        | Banking_Trojan |
+| 203[.]176[.]135[.]102 | 10.22.33.145 | ET CNC Feodo Tracker Reported CnC Server group 15        | Banking_Trojan |
+
+Eliminating those Feodo Tracker hits, what else is Suricata telling us?
+
+![](./images/3-8-20-2.png)
+
+In filtering out the above Feodo signatures, there was 1 other IP address that we'd not identified previously as well as the one that used port `8082` (`192[.]3[.]124[.]40` and `203[.]176[.]135[.]102`, respectfully). Additionally, there was some high-port to high-port communication coming from `192[.]3[.]124[.]40`, which is interesting.
+
+![](./images/3-8-20-3.png)
+
+Let's get out of the "known bad" identified by signatures, and go over to the Discover tab to see what else we can find out about the traffic. Let's start with Zeek data and just those 2 IP addresses
+
+`event.module: zeek AND (source.ip: 192[.]3[.]124[.]40 OR destination.ip: 192[.]3[.]124[.]40 OR source.ip: 203[.]176[.]135[.]102 OR destination.ip: 203[.]176[.]135[.]102)`
+
+When we organize the data this way, we can see 2 connection groups that look the most interesting:
+
+| Source IP  | Destination IP    | Interesting Item |
+|-----------------|--------------|-----------------|----------------|
+| 10.22.33.145 | 203[.]176[.]135[.]102 | Suricata hits w/port 8082 |
+| 10.22.33.145 | 192[.]3[.]124[.]40 | Suricata hits w/PE downloads |
+
+I'll target the unencrypted traffic and pull some packets out and do some analysis.
+
+![](./images/3-8-20-4.png)
+
+Let's start with the PE downloads. There are 2 ways to collect them:
+1. Carve from PCAP
+1. Leverage the extracted files feature of Zeek.
+
+These have names that we've seen in my previous analysis of [Trickbot](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/index.md#2212020---trickbot-gtag-wecan23-infection), (`mini[.]png`, `lastimage[.]png` x2). Of note, these samples are not in VirusTotal as of 3/3/2020. Their hashes are in the Artifacts section as well as Yara signatures in the [Detection Logic](https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md). This looks to be Trickbot traffic.
+
+Moving onto `203[.]176[.]135[.]102`.
+
+![](./images/3-8-20-5.png)
+
+We can see that the HTTP POST connections appear to be uploading some data `/red4/DESKTOP-5N98NBB_W10018363.8DB232C0E83418B2F3D90BF34165F326/81/` and `/red4/DESKTOP-5N98NBB_W10018363.8DB232C0E83418B2F3D90BF34165F326/90` (`/90` is provided by Suricata logs, not Zeek). This looks like host identification information to a server named `Cowboy` (which we'd also seen in our previous Trickbot analysis).
+
+![](./images/3-8-20-6.png)
+
+Looking at all of this traffic, it looks like the hash values and infrastructure have been changed, but not the TTPs used by the aggressor.
+
+Let's look back at some of the `447` and `449` traffic we identified earlier and see if there are any IPs that we didn't catch with Suricata...and 3 new IPs that didn't trip a Suricata alert.
+
+- 170[.]84[.]78[.]224
+- 212[.]109[.]220[.]222
+- 85[.]204[.]116[.]84
+
+![](./images/3-8-20-7.png)
+
+Looking at them in Discover, there are a lot of failed connections (`RSTO/R` - aborted by the originator/responder and `S0` a connection attempt seen, but no reply), so let's add that to the data table and see.
+
+
+------ stopped 3/4s
+
+![](./images/3-8-20-8.png)
+
+## Detection Logic
+[Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md).
+
+![](./images/2-28-20-8.png)
+
+## Artifacts
+```
+5[.]2[.]77[.]18 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+85[.]143[.]216[.]206 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+186[.]71[.]150[.]23 port 449 (Trickbot, GTAG, Red4 TLS traffic)
+190[.]214[.]13[.]2 port 449 (Trickbot, GTAG, Red4 TLS traffic)
+195[.]133[.]145[.]31 port 443 (Trickbot, GTAG, Red4 TLS traffic)
+66[.]85[.]173[.]20 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+93[.]189[.]41[.]185 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+203[.]176[.]135[.]102 port 8082 (enumeration data exfil)
+192[.]3[.]124[.]40 ()
+9149a43c1fd3c74269648223255d2a83 - lastimage[.]png (Trickbot binaries)
+fed45d3744a23e40f0b0452334826fc2 - lastimage[.]png (Trickbot binaries)
+acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binaries)
+```
+
+
+
+
+
+
+
 # 2/28/2020 - Qbot (Qakbot)
 - [Packets](http://malware-traffic-analysis.net/2020/01/29/index.html)
 - [Qbot banking trojan background](https://blog.talosintelligence.com/2019/05/qakbot-levels-up-with-new-obfuscation.html)
