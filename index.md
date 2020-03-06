@@ -30,7 +30,7 @@ Walking through the image, we have `ET HUNTING GENERIC SUSPICIOUS POST to Dotted
 
 The next alert is `ET CNC Feodo Tracker Reported CnC Server group x`, there are several of those for different "groups". Filtering on them individually, it's also `10.22.33.145` as the infected host. With the volume here, I'm going to pop over and make a simple data table with `destination.ip`, `source.ip`, and `alert.signature`.
 
-Of note, there are 4 ports involved here, `447` and `449` look pretty uniform across the alerts, but `443` and `8082`, while hitting the same signature, appear to be different stages in the event, so we'll take note of those and poke at those later.
+Of note, there are 4 ports involved here, `447` and `449` (both TLS) look pretty uniform across the alerts, but `443` and `8082`, while hitting the same signature, appear to be different stages in the event, so we'll take note of those and poke at those later.
 
 | Destination IP  | Source IP    | Signature                                                      | Tag            |
 |-----------------|--------------|----------------------------------------------------------------|----------------|
@@ -67,8 +67,8 @@ I'll target the unencrypted traffic and pull some packets out and do some analys
 ![](./images/3-8-20-4.png)
 
 Let's start with the PE downloads. There are 2 ways to collect them:
-1. Carve from PCAP
-1. Leverage the extracted files feature of Zeek.
+1. Carve from PCAP w/Docket
+1. Leverage the file extraction feature of Zeek.
 
 These have names that we've seen in my previous analysis of [Trickbot](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/index.md#2212020---trickbot-gtag-wecan23-infection), (`mini[.]png`, `lastimage[.]png` x2). Of note, these samples are not in VirusTotal as of 3/3/2020. Their hashes are in the Artifacts section as well as Yara signatures in the [Detection Logic](https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md). This looks to be Trickbot traffic.
 
@@ -80,7 +80,7 @@ We can see that the HTTP POST connections appear to be uploading some data `/red
 
 ![](./images/3-8-20-6.png)
 
-Looking at all of this traffic, it looks like the hash values and infrastructure have been changed, but not the TTPs used by the aggressor.
+Looking at all of this traffic, it looks like the hash values and infrastructure have been changed from previous intrusions, but not the TTPs used by the aggressor.
 
 Let's look back at some of the `447` and `449` traffic we identified earlier and see if there are any IPs that we didn't catch with Suricata...and 3 new IPs that didn't trip a Suricata alert.
 

@@ -67,6 +67,7 @@ curl -OL [malware file.pcap.zip]
 unzip [file.pcap.zip] (password: infected)
 sudo tcpreplay -t -i [monitor interface] [file.pcap]
 ```
+*Note: the `-t` flag in `tcpreplay` will fire the traffic all at once and may overrun you network socket buffer and cause you to drop traffic. Remove the `-t` flag if you have this issue, but `tcpreplay` will run for as long as it took the pcap to be captured - so a 2 hour pcap will take 2 hours to replay.*
 
 # Logging into ROCK
 In the home directory of the user you created during the installation, there is a file called `KIBANA_CREDENTIALS.txt`. In there you'll find your username and passphrase.
