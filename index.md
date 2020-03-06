@@ -47,7 +47,7 @@ Eliminating those Feodo Tracker hits, what else is Suricata telling us?
 
 ![](./images/3-8-20-2.png)
 
-There was 1 other IP address that we'd not identified previously as well as the one that used port `8082` (`192[.]3[.]124[.]40` and `203[.]176[.]135[.]102`, respectfully). Additionally, there was some high-port to high-port communication coming from `192[.]3[.]124[.]40`, which is interesting.
+In filtering out the above Feodo signatures, there was 1 other IP address that we'd not identified previously as well as the one that used port `8082` (`192[.]3[.]124[.]40` and `203[.]176[.]135[.]102`, respectfully). Additionally, there was some high-port to high-port communication coming from `192[.]3[.]124[.]40`, which is interesting.
 
 ![](./images/3-8-20-3.png)
 
@@ -58,7 +58,7 @@ Let's get out of the "known bad" identified by signatures, and go over to the Di
 When we organize the data this way, we can see 2 connection groups that look the most interesting:
 
 | Source IP  | Destination IP    | Interesting Item |
-|-----------------|--------------|-----------------|
+|-----------------|--------------|-----------------|----------------|
 | 10.22.33.145 | 203[.]176[.]135[.]102 | Suricata hits w/port 8082 |
 | 10.22.33.145 | 192[.]3[.]124[.]40 | Suricata hits w/PE downloads |
 
@@ -66,7 +66,7 @@ I'll target the unencrypted traffic and pull some packets out and do some analys
 
 ![](./images/3-8-20-4.png)
 
-Let's start with the PE downloads (`application/x-dosexec`). There are 2 ways to collect them:
+Let's start with the PE downloads. There are 2 ways to collect them:
 1. Carve from PCAP
 1. Leverage the extracted files feature of Zeek.
 
@@ -92,11 +92,8 @@ Let's look back at some of the `447` and `449` traffic we identified earlier and
 
 Looking at them in Discover, there are a lot of failed connections (`RSTO/R` - aborted by the originator/responder and `S0` a connection attempt seen, but no reply), so let's add that to the data table and see. Here we've got a new IP.
 
-<<<<<<< HEAD
 - 5[.]255[.]96[.]115
 
-=======
->>>>>>> fb36f8dbf5741cfb3e1612f8b710422ae29a33a3
 ![](./images/3-8-20-8.png)
 
 *Note: Having reset or failed connection attempts isn't necessarily a guaranteed bad, but when we're seeing the same traffic profile (port 447, 449, high-port to high-port) in conjunction with the resets...and some OSINT research also associates them with Trickbot, I'm going to categorize this as "bad".*
@@ -117,10 +114,12 @@ We can see that there is some SSL Subjects that certainly look suspect. When we 
 | 10.22.33.145 | 190[.]214[.]13[.]2 | ST=Some-State |
 | 10.22.33.145 | 5[.]182[.]210[.]226 | CN=img[.]bullforyou[.]com |
 
-Of extreme note, are `5[.]182[.]210[.]226` and `CN=img[.]bullforyou[.]com`. These are new indicators and in searching them online, I wasn't able to find much research (as of 3/3).
+Of extreme note, are `5[.]182[.]210[.]226` and `CN=img[.]bullforyou[.]com`. These are new indicators and in searching them online, I wasn't able to find much research (as of 3/3). In digging into [the certificate analysis](https://censys.io/certificates?q=Bullforyou.com&page=1), you can see that this domain had several subdomains for multiple states. In doing some additional research, this shows up just 2 times (ex: [1](https://www.joesandbox.com/analysis/203441/0/pdf), [2](https://www.joesandbox.com/analysis/208271/0/html)), but even though this is in bad PCAP, I'm going to put this into the "bad" category as I really feel like this is C2. If anyone has other observations or opinions, I'd love to hear them.
 
 ## Detection Logic
 [Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md).
+
+![](./images/2-28-20-8.png)
 
 ## Artifacts
 ```
@@ -134,23 +133,22 @@ Of extreme note, are `5[.]182[.]210[.]226` and `CN=img[.]bullforyou[.]com`. Thes
 66[.]85[.]173[.]20 port 447 (Trickbot, GTAG, Red4 TLS traffic)
 93[.]189[.]41[.]185 port 447 (Trickbot, GTAG, Red4 TLS traffic)
 203[.]176[.]135[.]102 port 8082 (enumeration data exfil)
-<<<<<<< HEAD
 192[.]3[.]124[.]40 (port 80, 50063, and 49767 Trickbot PE download)
 170[.]84[.]78[.]224 port 449 (Trickbot, GTAG, Red4 TLS traffic)
 212[.]109[.]220[.]222 port 447 (Trickbot, GTAG, Red4 TLS traffic)
 85[.]204[.]116[.]84 port 447 (Trickbot, GTAG, Red4 TLS traffic)
-5[.]182[.]210[.]226
-img[.]bullforyou[.]com
+5[.]182[.]210[.]226 (Trickbot C2, moderate confidence)
+img[.]bullforyou[.]com (Trickbot C2, moderate confidence)
 9149a43c1fd3c74269648223255d2a83 - lastimage[.]png (Trickbot binaries)
 fed45d3744a23e40f0b0452334826fc2 - lastimage[.]png (Trickbot binaries)
 acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binaries)
-=======
-192[.]3[.]124[.]40 (Trickbot binary)
-9149a43c1fd3c74269648223255d2a83 - lastimage[.]png (Trickbot binary)
-fed45d3744a23e40f0b0452334826fc2 - lastimage[.]png (Trickbot binary)
-acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binary)
->>>>>>> fb36f8dbf5741cfb3e1612f8b710422ae29a33a3
 ```
+
+
+
+
+
+
 
 # 2/28/2020 - Qbot (Qakbot)
 - [Packets](http://malware-traffic-analysis.net/2020/01/29/index.html)
@@ -231,10 +229,10 @@ I wasn't able to grab `9312.zip`, I have the packets, but there are hundreds of 
 
 In keeping to my mantra of not "finding" things simply because they're on the IOC list from Malware Traffic Analysis, beyond playing "whack-a-mole" with DNS entries, which I have done before, there wasn't much additional information I was able to find through raw hunting. I did want to showcase some indicators that Malware Traffic Analysis did highlight, but beyond knowing they were bad because it's in the IOC list, I don't think in good consciousness I can say I'd have found it on my own.
 
-![](./images/2-28-20-8.png)
-
 ## Detection Logic
 [Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/qbot.md).
+
+![](./images/2-28-20-8.png)
 
 ## Artifacts
 ```
