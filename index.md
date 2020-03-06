@@ -97,8 +97,6 @@ Looking at them in Discover, there are a lot of failed connections (`RSTO/R` - a
 ## Detection Logic
 [Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md).
 
-![](./images/2-28-20-8.png)
-
 ## Artifacts
 ```
 5[.]2[.]77[.]18 port 447 (Trickbot, GTAG, Red4 TLS traffic)
@@ -109,17 +107,11 @@ Looking at them in Discover, there are a lot of failed connections (`RSTO/R` - a
 66[.]85[.]173[.]20 port 447 (Trickbot, GTAG, Red4 TLS traffic)
 93[.]189[.]41[.]185 port 447 (Trickbot, GTAG, Red4 TLS traffic)
 203[.]176[.]135[.]102 port 8082 (enumeration data exfil)
-192[.]3[.]124[.]40 ()
-9149a43c1fd3c74269648223255d2a83 - lastimage[.]png (Trickbot binaries)
-fed45d3744a23e40f0b0452334826fc2 - lastimage[.]png (Trickbot binaries)
-acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binaries)
+192[.]3[.]124[.]40 (Trickbot binary)
+9149a43c1fd3c74269648223255d2a83 - lastimage[.]png (Trickbot binary)
+fed45d3744a23e40f0b0452334826fc2 - lastimage[.]png (Trickbot binary)
+acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binary)
 ```
-
-
-
-
-
-
 
 # 2/28/2020 - Qbot (Qakbot)
 - [Packets](http://malware-traffic-analysis.net/2020/01/29/index.html)
@@ -200,10 +192,10 @@ I wasn't able to grab `9312.zip`, I have the packets, but there are hundreds of 
 
 In keeping to my mantra of not "finding" things simply because they're on the IOC list from Malware Traffic Analysis, beyond playing "whack-a-mole" with DNS entries, which I have done before, there wasn't much additional information I was able to find through raw hunting. I did want to showcase some indicators that Malware Traffic Analysis did highlight, but beyond knowing they were bad because it's in the IOC list, I don't think in good consciousness I can say I'd have found it on my own.
 
+![](./images/2-28-20-8.png)
+
 ## Detection Logic
 [Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/qbot.md).
-
-![](./images/2-28-20-8.png)
 
 ## Artifacts
 ```
