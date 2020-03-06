@@ -47,7 +47,7 @@ Eliminating those Feodo Tracker hits, what else is Suricata telling us?
 
 ![](./images/3-8-20-2.png)
 
-In filtering out the above Feodo signatures, there was 1 other IP address that we'd not identified previously as well as the one that used port `8082` (`192[.]3[.]124[.]40` and `203[.]176[.]135[.]102`, respectfully). Additionally, there was some high-port to high-port communication coming from `192[.]3[.]124[.]40`, which is interesting.
+There was 1 other IP address that we'd not identified previously as well as the one that used port `8082` (`192[.]3[.]124[.]40` and `203[.]176[.]135[.]102`, respectfully). Additionally, there was some high-port to high-port communication coming from `192[.]3[.]124[.]40`, which is interesting.
 
 ![](./images/3-8-20-3.png)
 
@@ -58,7 +58,7 @@ Let's get out of the "known bad" identified by signatures, and go over to the Di
 When we organize the data this way, we can see 2 connection groups that look the most interesting:
 
 | Source IP  | Destination IP    | Interesting Item |
-|-----------------|--------------|-----------------|----------------|
+|-----------------|--------------|-----------------|
 | 10.22.33.145 | 203[.]176[.]135[.]102 | Suricata hits w/port 8082 |
 | 10.22.33.145 | 192[.]3[.]124[.]40 | Suricata hits w/PE downloads |
 
@@ -66,7 +66,7 @@ I'll target the unencrypted traffic and pull some packets out and do some analys
 
 ![](./images/3-8-20-4.png)
 
-Let's start with the PE downloads. There are 2 ways to collect them:
+Let's start with the PE downloads (`application/x-dosexec`). There are 2 ways to collect them:
 1. Carve from PCAP
 1. Leverage the extracted files feature of Zeek.
 
@@ -91,9 +91,6 @@ Let's look back at some of the `447` and `449` traffic we identified earlier and
 ![](./images/3-8-20-7.png)
 
 Looking at them in Discover, there are a lot of failed connections (`RSTO/R` - aborted by the originator/responder and `S0` a connection attempt seen, but no reply), so let's add that to the data table and see.
-
-
------- stopped 3/4s
 
 ![](./images/3-8-20-8.png)
 
