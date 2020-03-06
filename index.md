@@ -92,11 +92,8 @@ Let's look back at some of the `447` and `449` traffic we identified earlier and
 
 Looking at them in Discover, there are a lot of failed connections (`RSTO/R` - aborted by the originator/responder and `S0` a connection attempt seen, but no reply), so let's add that to the data table and see. Here we've got a new IP.
 
-<<<<<<< HEAD
 - 5[.]255[.]96[.]115
 
-=======
->>>>>>> fb36f8dbf5741cfb3e1612f8b710422ae29a33a3
 ![](./images/3-8-20-8.png)
 
 *Note: Having reset or failed connection attempts isn't necessarily a guaranteed bad, but when we're seeing the same traffic profile (port 447, 449, high-port to high-port) in conjunction with the resets...and some OSINT research also associates them with Trickbot, I'm going to categorize this as "bad".*
@@ -108,7 +105,7 @@ There's been a lot here, so to round out, I decided to look through the TLS logs
 We can see that there is some SSL Subjects that certainly look suspect. When we look at some of the IP addresses, we can see that they're from known bad actors (ex: `85[.]143[.]216[.]206`).
 
 | Source IP  | Destination IP    | Interesting Item |
-|-----------------|--------------|-----------------|----------------|
+|-----------------|--------------|-----------------|
 | 10.22.33.145 | 85[.]143[.]216[.]206 | CN=example.com |
 | 10.22.33.145 | 5[.]2[.]77[.]18 | CN=example.com |
 | 10.22.33.145 | 66[.]85[.]173[.]20 | CN=example.com |
@@ -134,7 +131,6 @@ Of extreme note, are `5[.]182[.]210[.]226` and `CN=img[.]bullforyou[.]com`. Thes
 66[.]85[.]173[.]20 port 447 (Trickbot, GTAG, Red4 TLS traffic)
 93[.]189[.]41[.]185 port 447 (Trickbot, GTAG, Red4 TLS traffic)
 203[.]176[.]135[.]102 port 8082 (enumeration data exfil)
-<<<<<<< HEAD
 192[.]3[.]124[.]40 (port 80, 50063, and 49767 Trickbot PE download)
 170[.]84[.]78[.]224 port 449 (Trickbot, GTAG, Red4 TLS traffic)
 212[.]109[.]220[.]222 port 447 (Trickbot, GTAG, Red4 TLS traffic)
@@ -144,12 +140,6 @@ img[.]bullforyou[.]com
 9149a43c1fd3c74269648223255d2a83 - lastimage[.]png (Trickbot binaries)
 fed45d3744a23e40f0b0452334826fc2 - lastimage[.]png (Trickbot binaries)
 acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binaries)
-=======
-192[.]3[.]124[.]40 (Trickbot binary)
-9149a43c1fd3c74269648223255d2a83 - lastimage[.]png (Trickbot binary)
-fed45d3744a23e40f0b0452334826fc2 - lastimage[.]png (Trickbot binary)
-acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binary)
->>>>>>> fb36f8dbf5741cfb3e1612f8b710422ae29a33a3
 ```
 
 # 2/28/2020 - Qbot (Qakbot)
