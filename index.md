@@ -116,10 +116,10 @@ We can see that there is some SSL Subjects that certainly look suspect. When we 
 
 Of extreme note, are `5[.]182[.]210[.]226` and `CN=img[.]bullforyou[.]com`. These are new indicators and in searching them online, I wasn't able to find much research (as of 3/3). In digging into [the certificate analysis](https://censys.io/certificates?q=Bullforyou.com&page=1), you can see that this domain had several subdomains for multiple states. In doing some additional research, this shows up just 2 times (ex: [1](https://www.joesandbox.com/analysis/203441/0/pdf), [2](https://www.joesandbox.com/analysis/208271/0/html)), but even though this is in bad PCAP, I'm going to put this into the "bad" category as I really feel like this is C2. If anyone has other observations or opinions, I'd love to hear them.
 
+![](./images/3-8-20-10.png)
+
 ## Detection Logic
 [Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md).
-
-![](./images/2-28-20-8.png)
 
 ## Artifacts
 ```
@@ -143,12 +143,7 @@ img[.]bullforyou[.]com (Trickbot C2, moderate confidence)
 fed45d3744a23e40f0b0452334826fc2 - lastimage[.]png (Trickbot binaries)
 acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binaries)
 ```
-
-
-
-
-
-
+Until next time, cheers and happy hunting!
 
 # 2/28/2020 - Qbot (Qakbot)
 - [Packets](http://malware-traffic-analysis.net/2020/01/29/index.html)
@@ -229,10 +224,10 @@ I wasn't able to grab `9312.zip`, I have the packets, but there are hundreds of 
 
 In keeping to my mantra of not "finding" things simply because they're on the IOC list from Malware Traffic Analysis, beyond playing "whack-a-mole" with DNS entries, which I have done before, there wasn't much additional information I was able to find through raw hunting. I did want to showcase some indicators that Malware Traffic Analysis did highlight, but beyond knowing they were bad because it's in the IOC list, I don't think in good consciousness I can say I'd have found it on my own.
 
+![](./images/2-28-20-8.png)
+
 ## Detection Logic
 [Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/qbot.md).
-
-![](./images/2-28-20-8.png)
 
 ## Artifacts
 ```
