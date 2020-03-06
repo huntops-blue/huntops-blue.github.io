@@ -58,7 +58,7 @@ Let's get out of the "known bad" identified by signatures, and go over to the Di
 When we organize the data this way, we can see 2 connection groups that look the most interesting:
 
 | Source IP  | Destination IP    | Interesting Item |
-|-----------------|--------------|-----------------|----------------|
+|-----------------|--------------|-----------------|
 | 10.22.33.145 | 203[.]176[.]135[.]102 | Suricata hits w/port 8082 |
 | 10.22.33.145 | 192[.]3[.]124[.]40 | Suricata hits w/PE downloads |
 
