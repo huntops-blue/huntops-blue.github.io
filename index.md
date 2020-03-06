@@ -105,7 +105,7 @@ There's been a lot here, so to round out, I decided to look through the TLS logs
 We can see that there is some SSL Subjects that certainly look suspect. When we look at some of the IP addresses, we can see that they're from known bad actors (ex: `85[.]143[.]216[.]206`).
 
 | Source IP  | Destination IP    | Interesting Item |
-|-----------------|--------------|-----------------|----------------|
+|-----------------|--------------|-----------------|
 | 10.22.33.145 | 85[.]143[.]216[.]206 | CN=example.com |
 | 10.22.33.145 | 5[.]2[.]77[.]18 | CN=example.com |
 | 10.22.33.145 | 66[.]85[.]173[.]20 | CN=example.com |
