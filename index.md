@@ -100,7 +100,7 @@ Looking at them in Discover, there are a lot of failed connections (`RSTO/R` - a
 
 There's been a lot here, so to round out, I decided to look through the TLS logs to see what we can see. As with all of this, it's a bit of looking for needles in a needle stack, but the process is the same.
 
-![](./images/2-28-20-9.png)
+![](./images/3-8-20-9.png)
 
 We can see that there is some SSL Subjects that certainly look suspect. When we look at some of the IP addresses, we can see that they're from known bad actors (ex: `85[.]143[.]216[.]206`).
 
