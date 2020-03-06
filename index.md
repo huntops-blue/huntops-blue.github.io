@@ -90,12 +90,31 @@ Let's look back at some of the `447` and `449` traffic we identified earlier and
 
 ![](./images/3-8-20-7.png)
 
-Looking at them in Discover, there are a lot of failed connections (`RSTO/R` - aborted by the originator/responder and `S0` a connection attempt seen, but no reply), so let's add that to the data table and see.
+Looking at them in Discover, there are a lot of failed connections (`RSTO/R` - aborted by the originator/responder and `S0` a connection attempt seen, but no reply), so let's add that to the data table and see. Here we've got a new IP.
 
-
------- stopped 3/4s
+- 5[.]255[.]96[.]115
 
 ![](./images/3-8-20-8.png)
+
+*Note: Having reset or failed connection attempts isn't necessarily a guaranteed bad, but when we're seeing the same traffic profile (port 447, 449, high-port to high-port) in conjunction with the resets...and some OSINT research also associates them with Trickbot, I'm going to categorize this as "bad".*
+
+There's been a lot here, so to round out, I decided to look through the TLS logs to see what we can see. As with all of this, it's a bit of looking for needles in a needle stack, but the process is the same.
+
+![](./images/2-28-20-9.png)
+
+We can see that there is some SSL Subjects that certainly look suspect. When we look at some of the IP addresses, we can see that they're from known bad actors (ex: `85[.]143[.]216[.]206`).
+
+| Source IP  | Destination IP    | Interesting Item |
+|-----------------|--------------|-----------------|----------------|
+| 10.22.33.145 | 85[.]143[.]216[.]206 | CN=example.com |
+| 10.22.33.145 | 5[.]2[.]77[.]18 | CN=example.com |
+| 10.22.33.145 | 66[.]85[.]173[.]20 | CN=example.com |
+| 10.22.33.145 | 5[.]2[.]77[.]18 | CN=vps31656725 |
+| 10.22.33.145 | 186[.]71[.]150[.]23 | ST=Some-State |
+| 10.22.33.145 | 190[.]214[.]13[.]2 | ST=Some-State |
+| 10.22.33.145 | 5[.]182[.]210[.]226 | CN=img[.]bullforyou[.]com |
+
+Of extreme note, are `5[.]182[.]210[.]226` and `CN=img[.]bullforyou[.]com`. These are new indicators and in searching them online, I wasn't able to find much research (as of 3/3).
 
 ## Detection Logic
 [Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md).
@@ -105,14 +124,21 @@ Looking at them in Discover, there are a lot of failed connections (`RSTO/R` - a
 ## Artifacts
 ```
 5[.]2[.]77[.]18 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+5[.]255[.]96[.]115 port 443 (Trickbot, GTAG, Red4 TLS traffic)
 85[.]143[.]216[.]206 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+85[.]143[.]220[.]73 port 447 (Trickbot, GTAG, Red4 TLS traffic)
 186[.]71[.]150[.]23 port 449 (Trickbot, GTAG, Red4 TLS traffic)
 190[.]214[.]13[.]2 port 449 (Trickbot, GTAG, Red4 TLS traffic)
 195[.]133[.]145[.]31 port 443 (Trickbot, GTAG, Red4 TLS traffic)
 66[.]85[.]173[.]20 port 447 (Trickbot, GTAG, Red4 TLS traffic)
 93[.]189[.]41[.]185 port 447 (Trickbot, GTAG, Red4 TLS traffic)
 203[.]176[.]135[.]102 port 8082 (enumeration data exfil)
-192[.]3[.]124[.]40 ()
+192[.]3[.]124[.]40 (port 80, 50063, and 49767 Trickbot PE download)
+170[.]84[.]78[.]224 port 449 (Trickbot, GTAG, Red4 TLS traffic)
+212[.]109[.]220[.]222 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+85[.]204[.]116[.]84 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+5[.]182[.]210[.]226
+img[.]bullforyou[.]com
 9149a43c1fd3c74269648223255d2a83 - lastimage[.]png (Trickbot binaries)
 fed45d3744a23e40f0b0452334826fc2 - lastimage[.]png (Trickbot binaries)
 acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binaries)
