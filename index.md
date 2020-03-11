@@ -9,8 +9,7 @@ RockNSM is an open source network security monitoring platform built with Zeek f
 - [ROCK installation guide](./rock-install.md)
 - [Docket (the "Query PCAP" @dcode added to Kibana)](https://docs.rocknsm.io/services/docket/)
 - [Replaying Packets](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock)
-- [Twitter @andythevariable](https://twitter.com/andythevariable)
---
+- [Twitter @andythevariable](https://twitter.com/andythevariable)  
 
 <ul>
   {% for post in site.posts %}
@@ -20,5 +19,5 @@ RockNSM is an open source network security monitoring platform built with Zeek f
   {% endfor %}
 </ul>
 
---
+---
 *Packets provided by [Malware Traffic Analysis](https://www.malware-traffic-analysis.net) - @malware_traffic*
