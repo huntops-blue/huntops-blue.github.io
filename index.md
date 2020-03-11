@@ -19,10 +19,5 @@ RockNSM is an open source network security monitoring platform built with Zeek f
   {% endfor %}
 </ul>
 
-{% post_url /_posts/2020-02-21-trickbot %}  
-{% post_url 2020-02-21-trickbot %}  
-[Link]({% link _posts/2020-02-21-trickbot %})
-[Link]({% link 2020-02-21-trickbot %})
-
 ---
 *Packets provided by [Malware Traffic Analysis](https://www.malware-traffic-analysis.net) - @malware_traffic*
