@@ -1,3 +1,4 @@
 theme: jekyll-theme-midnight
 title: HuntOps
 google_analytics: UA-158770799-1
+baseurl: "/huntops-blue-github.io"
