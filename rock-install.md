@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Installing RockNSM
 This isn't a full walkthrough, it's meant to be a quick and dirty quick-start.
 
