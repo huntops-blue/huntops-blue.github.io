@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>2/24/2020 - Ursnif Infection | HuntOps</title>
+<meta name="generator" content="Jekyll v4.0.0" />
+<meta property="og:title" content="2/24/2020 - Ursnif Infection" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="2/24/2020 - Ursnif Packets Qbot banking trojan background" />
+<meta property="og:description" content="2/24/2020 - Ursnif Packets Qbot banking trojan background" />
+<link rel="canonical" href="http://localhost:4000/2020/02/24/ursnif.html" />
+<meta property="og:url" content="http://localhost:4000/2020/02/24/ursnif.html" />
+<meta property="og:site_name" content="HuntOps" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-02-24T00:00:00-06:00" />
+<script type="application/ld+json">
+{"url":"http://localhost:4000/2020/02/24/ursnif.html","headline":"2/24/2020 - Ursnif Infection","dateModified":"2020-02-24T00:00:00-06:00","datePublished":"2020-02-24T00:00:00-06:00","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2020/02/24/ursnif.html"},"description":"2/24/2020 - Ursnif Packets Qbot banking trojan background","@type":"BlogPosting","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="/assets/js/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="/assets/css/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>HuntOps</h1>
+          <p></p>
+          <hr>
+        </div>
+
+        <h1 id="2242020---ursnif">2/24/2020 - Ursnif</h1>
+<ul>
+  <li><a href="http://malware-traffic-analysis.net/2020/02/11/index.html">Packets</a></li>
+  <li><a href="https://attack.mitre.org/software/S0386/">Qbot banking trojan background</a></li>
+</ul>
+
+<p>Suricata has picked up some easy things to get started on, so let’s start there.</p>
+
+<p><img src="/images/2-24-20-1.png" alt="" /></p>
+
+<p>Of particular interest to me (not that the others aren’t interesting), are the executable signatures; so let’s filter out the <code class="highlighter-rouge">opendns[.]com</code> lookups for now. This takes us down to a single source and destination to focus on, <code class="highlighter-rouge">194[.]61[.]2[.]16</code> and <code class="highlighter-rouge">10.2.11.101</code>.</p>
+
+<p><img src="/images/2-24-20-2.png" alt="" /></p>
+
+<p>Hopping over to the Discover tab, when we apply the source IP from the previous step, we see only 8 events…definitely manageable. Let’s get rid of the <code class="highlighter-rouge">alert</code> dataset because we know about those from the Suricata dashboard.</p>
+
+<p><img src="/images/2-24-20-3.png" alt="" /></p>
+
+<p>Now that we’ve used the metadata to get down to a single IP address as the potential bad actor, let’s use Docket to carve the packets for that IP and see what it can tell us. Using Wireshark on these packets, we follow the TCP stream and see this URL and a downloaded PE executable.</p>
+
+<p><img src="/images/2-24-20-4.png" alt="" /></p>
+
+<p>Exporting the HTTP object gives us the PE file, which we can analyze as well.</p>
+
+<p><img src="/images/2-24-20-5.png" alt="" /></p>
+
+<p>Using <code class="highlighter-rouge">exiftool</code>, we can see some interesting info, mainly that the original file was called <code class="highlighter-rouge">soldier.dll</code> and that the File Type is <code class="highlighter-rouge">Win32 EXE</code> (truncated).</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ exiftool lastimg.png
+...
+File Name                       : 215z9urlgz.php%3fl=xubiz8.cab
+File Type                       : Win32 EXE
+File Type Extension             : exe
+MIME Type                       : application/octet-stream
+Image File Characteristics      : Executable, 32-bit
+PE Type                         : PE32
+Original File Name              : soldier.dll
+...
+</code></pre></div></div>
+
+<p>Checking with VirusTotal, we see that the file hash is <a href="https://www.virustotal.com/gui/file/996fcd8c55f923e86477d3d8069f9e9b56c6301cf9b2678c5c5c40bf6a636a5f/detection">known bad</a> so this looks like a good find!</p>
+
+<p>Now that we have a few more hints to search through, specifically <code class="highlighter-rouge">qr12s8ygy1[.]com</code>, let’s go back to Kibana and remove the stuff we’ve already found and see if we can find anything else.</p>
+
+<p><em>Of note, <code class="highlighter-rouge">settings-win.data.microsoft.com</code> appears to be a Microsoft botnet sinkhole, so while we can use some of the info, I’m going to remove this from our searches to eliminate traffic routes to chase. Additionally, I’m filtering out the OpenDNS traffic.</em></p>
+
+<p>Moving along, let’s make a Kibana data table to clean up our view a bit and we see <code class="highlighter-rouge">95[.]169[.]181[.]35</code> and <code class="highlighter-rouge">lcdixieeoe[.]com</code>, of note are those long URI’s + an AVI file. Let’s use Docket to see what’s in those packets.</p>
+
+<p><img src="/images/2-24-20-6.png" alt="" /></p>
+
+<p>Hopping right into Exporting the HTTP objects, we see the <code class="highlighter-rouge">*.avi</code> files we observed in Kibana’s <code class="highlighter-rouge">url.original</code> field. Let’s save those and take a look.</p>
+
+<p><img src="/images/2-24-20-7.png" alt="" /></p>
+
+<p>In looking at the metadata for those “avi” files, we see that they’re actually just Text files.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>======== B.avi
+...
+File Name                       : B.avi
+File Type                       : TXT
+File Type Extension             : txt
+MIME Type                       : text/plain
+...
+======== alSLK.avi
+...
+File Name                       : alSLK.avi
+File Type                       : TXT
+File Type Extension             : txt
+MIME Type                       : text/plain
+...
+======== jNjcj.avi
+...
+File Name                       : jNjcj.avi
+File Type                       : TXT
+File Type Extension             : txt
+MIME Type                       : text/plain
+...
+</code></pre></div></div>
+
+<p>I poked and prodded on these files, but I’m not sure what they are…but I know they aren’t normal media files. It looks like Base64 encoding, but I’m not sure what order they’re supposed to be assembled in to decode. Either way, they have the <code class="highlighter-rouge">.avi</code> file extension and certainly aren’t, so I’d put that in the suspect category.</p>
+
+<p>Extract of <code class="highlighter-rouge">B.avi</code></p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+p1kTy18hM3gcANzilINMVJWdUP4AbxDka8IVGBACN+HkZxzdIOi86DoUwglmVgw+BsGdGC3WLgE45BoaeDFcYxpoS8/HzXcwtxxa45Wiqordymiv5JlqzxHWS647gV2B0XpV1+A5h9PTPvxdfJV/CIAYGgCqFLzlxXF3znojgEGWHj/MwRbhIgMIKm9FDqEQEqxjDIv0SC+sqN9TxpQLNPCdqJwMTuQN2sfat464J1bh9LWzHwPwyZXErBH5+XmvEbIjOX3ptyRJOa4C+W0Cf6yOFLIPWas659a0x5tZAQs1VbwMjylWLlx6LA2Dmop1C4dwb+zH5SSJrYo5RKbc6DV1AmmRpeJ1NXkO30Z2Bq27U+h3uRUnMulPWSp1uTeLwc8LSFK49kTIaV0lwWNfDeb975aPmPac6kZP/5g5xgfB5/53/kC2KvHCbMUF8RotemD2ak+Lc0gzP7W/pcmbw/ZhxmdFJd5rPJz1lhGIOEZX6buFkcg3vjsBInd319vLO+ZSZmbU8m1ZryNsfLZ56tEvbafgCY1Jz/tP4UdKL6DZPyjCXC7oIEoCO3yn/yHOaFFQvOFizv2OnUPVW3ST+BN/TwkHUSZfE1+lKvjXJBsONeaiAa5ozLa2uI/ebx1caPFMjw0j62H23r0YFd0opsTw2ovlkvKcx3eoT
+...
+</code></pre></div></div>
+
+<p>Extract of a normal .avi files</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>RIFF,O
+AVI LIST�hdrlavih85�
+                    �"�LISTtstrlstrh8vidscvid�"�strf((�IV41JUNKLIST�;
+movi00db~
+���|
+��`��؝����@�|��@�P!����9���&amp;��y��i��y���y��y&gt;�����&lt;��&lt;��y���&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;��&lt;ϲ&lt;����&lt;��&lt;��&lt;ϳ��&lt;��&lt;��&lt;��(��&lt;��&lt;��,��&lt;�S&lt;��&lt;��&lt;��|��y��y&gt;���&lt;��&lt;��&lt;����|n��y��y���y&gt;3��y��y��y�Qm&lt;�� �Z�;d�����ߢS%����T��!~nV�&amp;~RVG���(p&amp;
+                                                                    ��۹+��$g�E���V���
+�q��b�Z0���I.B�k����X�+|dy:$�X1��9��'ҙ*�
+9�1d!��P�x����l�y"d�m'a��#Ԏ&amp;Z]�"�%����fzڬ��q"j�g�c�X�(�p��j��xs`�&lt;Ĺg�R�$��pY�1�
+(
+ p6��� E	s	V�pɫ�Œ�vNaG�(q�9�����"*���%
+                                                    
+                                                     �k�8mY��f�."s�8
+                                                                    �(WL�!&lt;-|=_���C&amp;�ďo�s8��nj��T	sh��YX�oB�B��(NᠱI��ib��8���Y\�'1A�.�B$t´pHfB&lt;�9���A�n5Hf�R�D��
+                                                                                                                                                                      �g��9sVI���CsF!����2����S�Q�E�P��5Xj�txMF:�G�q�S��k�0N(3q]-��O�J��$��ID&gt;��a�
+����c'                                                      A9��
+P@X
+</code></pre></div></div>
+
+<p>Trying a bit more on these files, 2 of these “avi” files end in <code class="highlighter-rouge">=</code> (<code class="highlighter-rouge">B.avi</code> and <code class="highlighter-rouge">jNjcj.avi</code>), so I am definitely leaning more towards Base64. The file that doesn’t end in a <code class="highlighter-rouge">=</code> (<code class="highlighter-rouge">alSLK.avi</code>), I tried to append that to the top of the two files that do end in <code class="highlighter-rouge">=</code> and then run <code class="highlighter-rouge">base64 -D -i [file] -o [file]</code>, it created binary files (which seems like progress), but no luck in taking it apart. If anyone has any ideas here, feel free to reach out.</p>
+
+<p>Malware Traffic Analysis noted another indicator that was identified through the analysis of the infected Word documents (<code class="highlighter-rouge">45[.]141[.]103[.]204</code> and <code class="highlighter-rouge">q68jaydon3t[.]com</code>), which we don’t have. So while we see the traffic, it is all over TLS minus the initial DNS request so there’s not much we can do for that. The <code class="highlighter-rouge">ja3</code> nor <code class="highlighter-rouge">ja3s</code> hash was collected. I’m adding it to the artifacts below, but this would only be “known bad” if it was found through analysis of the document.</p>
+
+<h2 id="detection-logic">Detection Logic</h2>
+<p><a href="https://github.com/huntops-blue/detection-logic/blob/master/ursnif.md">Additional analysis, modeling, and signatures (KQL and Yara)</a>.</p>
+
+<h2 id="artifacts">Artifacts</h2>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>194[.]61[.]2[.]16
+95[.]169[.]181[.]35
+45[.]141[.]103[.]204 (found by Malware Traffic Analysis)
+8962cd86b47148840b6067c971ada128
+7e34d6e790707bcc862fd54c0129abfa
+40186e831cd2e9679ca725064d2ab0fb
+2b93fcafabab58a109fcbca4377cccda
+qr12s8ygy1[.]com
+lcdixieeoe[.]com
+q68jaydon3t[.]com (found by Malware Traffic Analysis)
+xubiz8[.]cab
+/khogpfyc8n/215z9urlgz[.]php
+</code></pre></div></div>
+
+<p>Until next time, cheers and happy hunting!</p>
+
+
+      </section>
+
+    </div>
+
+    
+      <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+        ga('create', 'UA-158770799-1', 'auto');
+        ga('send', 'pageview');
+      </script>
+    
+  </body>
+</html>
