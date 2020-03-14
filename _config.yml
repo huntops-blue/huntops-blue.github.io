@@ -2,3 +2,5 @@ theme: jekyll-theme-midnight
 title: HuntOps
 google_analytics: UA-158770799-1
 show_downloads: false
+plugins:
+  - jekyll-feed
