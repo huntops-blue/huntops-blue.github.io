@@ -25,9 +25,21 @@ Okay, lets pop on over to ROCK's HTTP dashboard and see what we can learn about 
 
 Applying different filters to this dashboard shows that only `10.3.11.101` and `45[.]153[.]73[.]33` are the only two systems talking back and forth with `thumbeks[.]com`, so lets look in the Discover app to learn a bit more.
 
-I've searched on the IP that we're interested in and applied the `http` dataset filter. Of note, I've added fields that I'm most interested in source IP, URL, etc. but I've also added the `Query PCAP` field so that I can use that to quickly carve the packets using Docket and Stenographer, both built into RockNSM. This traffic is over port 80 and likely unencrypted, so we should be able to get some good data from it.
+I've searched on the host that we're interested in and applied the `http` dataset filter. Of note, I've added fields that I'm most interested in source IP, URL, etc. but I've also added the `Query PCAP` field so that I can use that to quickly carve the packets using Docket and Stenographer, both built into RockNSM. This traffic is over port 80 and likely unencrypted, so we should be able to get some good data from it. Finally, we'll know more when we look at the HTTP headers, but the HTTP Method is a POST, so this is likely data exfil of some type.
+
+![](/images/3-20-20-4.png)
 
 I'll carve the PCAPs for `/4/forum[.]php`, `/d2/about[.]php`, and `/mlu/forum[.]php` to analyze them.
+
+Right off the bat with the first `/4/forum[.]php`, we can see that this is uploading a GUID and build number of the implant along with the hostname (`[redacted]-WIN10`), the userID (`[redacted]-WIN10\[username]`) and the host IP address (`IP=[redacted]`) along with a Base64 encoded string
+```
+NMNMARZAEg4OCkBVVQkSFQpUGwgOGxwcExQTDg4fH1QZFRdVDQpXExQZFg8eHwlVCRUeEw8XJRkVFwobDlVLBhIODgpAVVUYHw4bVBsIDhscHBMUEw4OHx9UGRUXVQ0KVxMUGRYPHh8JVRwVFA4JVUsGEg4OCglAVVUJEwkJVBkVVBMUVUsGEg4OCkBVVRcTGQgVGBYbHhMUHREPFg8YD1QZFRdVSwYSDg4KQFVVCQ4VGREXGwgRHw4IHwwVFg8OExUUVBkVF1VLBwEYQBIODgpAVVUJEhUKVBsIDhscHBMUEw4OHx9UGRUXVQ0KVxMUGRYPHh8JVQkVHhMPFyUZFRcKGw5VSAYSDg4KQFVVGB8OG1QbCA4bHBwTFBMODh8fVBkVF1UNClcTFBkWDx4fCVUcFRQOCVVIBhIODgoJQFVVCRMJCVQZFVQTFFVIBhIODgpAVVUXExkIFRgWGx4TFB0RDxYPGA9UGRUXVUgGEg4OCkBVVQkOFRkRFxsIER8OCB8MFRYPDhMVFFQZFRdVSAc=
+```
+This is followed by posting binary files from `/d2/about[.]php` and `/mlu/forum[.]php`
+
+![](/images/3-20-20-5.png)
+
+After the initial `/4/forum[.]php` + `/d2/about[.]php` + `/mlu/forum[.]php`, there are 3 more POSTs to `/4/forum[.]php` which have 2 different Base64 encoded strings (`CMNXARRABw==` and `AZAZARRABw==`). In checking online for those strings, there was 1 link to [Hybrid-Analysis](https://www.hybrid-analysis.com/sample/fdbc89d95c002985f71ef3a8471bded05e71559874f36dd12186def8eef73e81?environmentId=100) for a Hancitor analysis from 2018 (we knew this was Hancitor already, but this is the first evidence pointing us that direction).
 
 ![](MALTEGO IMAGE)
 
@@ -37,9 +49,9 @@ I'll carve the PCAPs for `/4/forum[.]php`, `/d2/about[.]php`, and `/mlu/forum[.]
 ## Artifacts
 ```
 45[.]153[.]73[.]33 - Pony Downloader C2
-/4/forum[.]php
-/d2/about[.]php
-/mlu/forum[.]php
+/4/forum[.]php - Hancitor C2
+/d2/about[.]php - Hancitor C2
+/mlu/forum[.]php - Hancitor C2
 ```
 
 Until next time, cheers and happy hunting!
