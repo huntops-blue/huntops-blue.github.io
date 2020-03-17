@@ -17,7 +17,7 @@ Filtering on the Pony Downloader alert, we can see that `10.3.11.101` looks like
 
 ![](/images/3-20-20-2.png)
 
-Before we move away from the Suricata dashboard, the alert is called Pony, which is part of the process that Hanciator uses to burrow into an infected system - usually Hancinator uses a VB macro to get Pony and then Pony acts as an installer to download the next stage (ransomware, banking trojan, etc.) [1](https://www.reddit.com/r/blackhat/comments/5oee1h/what_is_a_pony_downloader/), [2](https://www.proofpoint.com/us/threat-insight/post/hancitor-ruckguv-reappear), [3](https://www.fireeye.com/blog/threat-research/2016/09/hancitor_aka_chanit.html). Using that OSINT, we know that we're probably looking for a VB macro, which likely means an Office document.
+Before we move away from the Suricata dashboard, the alert is called Pony, which is part of the process that Hanciator uses to burrow into an infected system - usually Hancitor uses a VB macro to get Pony and then Pony acts as an installer to download the next stage (ransomware, banking trojan, etc.) [1](https://www.reddit.com/r/blackhat/comments/5oee1h/what_is_a_pony_downloader/), [2](https://www.proofpoint.com/us/threat-insight/post/hancitor-ruckguv-reappear), [3](https://www.fireeye.com/blog/threat-research/2016/09/hancitor_aka_chanit.html). Using that OSINT, we know that we're probably looking for a VB macro, which likely means an Office document.
 
 Okay, lets pop on over to ROCK's HTTP dashboard and see what we can learn about `45[.]153[.]73[.]33`. Here when we apply the filter for our bad IP address, we can see the HOST (`thumbeks[.]com`) and the URI's...all PHP files (`/4/forum[.]php`, `/d2/about[.]php`, `/mlu/forum[.]php`). [PHP](https://www.php.net/) is a web-centric scripting language that is perfect for all kinds of useful applications...and malware.
 
@@ -53,7 +53,9 @@ Lets start with the hosts (`freetospeak[.]me` and `shop[.]artaffinittee[.]com`) 
 
 ![](/images/3-20-20-9.png)
 
-We'll grab the packets to see what's there, but in doing a quick Google search for `0843_43.php` I can see that [Abuse.ch](https://urlhaus.abuse.ch/url/323970/) has listed some of the payloads that are delivered from this URI and they follow what we've observed - two capital letters, a dash, 12 numbers, and underscore, 4 numbers, and a zip file extension. We'll have a regex search in the Detection Logic section, but lets check out the packets.
+Before we move further into `freetospeak[.]me`, let's look at that IP address (`8[.]208[.]77[.]171`) and see if anyone else communicated with that IP and no one did. This is the proper process for analysis, but sometimes there's not any additional data.
+
+Moving on, we'll grab the packets to see what's there, but in doing a quick Google search for `0843_43.php` I can see that [Abuse.ch](https://urlhaus.abuse.ch/url/323970/) has listed some of the payloads that are delivered from this URI and they follow what we've observed - two capital letters, a dash, 12 numbers, and underscore, 4 numbers, and a zip file extension. We'll have a regex search in the Detection Logic section, but lets check out the packets.
 
 ![](/images/3-20-20-10.png)
 
@@ -111,7 +113,44 @@ MD5 (SE670131329809.vbs) = 8eb933c84e7777c7b623f19489a59a2a
 ```
 As it would turn out, it looks like someone has already submitted this to [VirusTotal](https://www.virustotal.com/gui/file/6897a3b85046ba97fb3868dfb82338e5ed098136720a6cf73625e784fc1e1e51/detection) and its got a 20/59 score, so this looks like a good hit! As we continue to look at the [behavior](https://www.virustotal.com/gui/file/6897a3b85046ba97fb3868dfb82338e5ed098136720a6cf73625e784fc1e1e51/behavior/Lastline) of this file, it looks like it's responsible for our connections to `thumbeks[.]com` and `api[.]ipify[.]org` (this is great because now we have a real reason to look at IPIFY, whereas before it was just suspicious, but now we can connect it to malware, so we can dig into that more), and a new domain (`cludions[.]com` - but we don't have any traffic to that domain in our sample). Of note, VT has some neat node analysis of this sample [here](https://www.virustotal.com/graph/6897a3b85046ba97fb3868dfb82338e5ed098136720a6cf73625e784fc1e1e51).
 
-![](MALTEGO IMAGE)
+Now that we've got a solid line between IPIFY and our infected host, so let's see who communicated with that external service. It doesn't look like anyone beyond our known infected host did, but this is an example of connecting something suspicious to known bad. We don't do figurative hand-waving here, so it was good to make that association.
+
+Okay, moving on to `shop[.]artaffinittee[.]com`, which as a reminder, we identified this by profiling DNS traffic above and found `freetospeak[.]me`.
+
+There are three things that we can dig into:
+
+- `/wp-includes/sodium_compat/1` - `19fe0b844a00c57f60a0d9d29e6974e7`
+- `/wp-includes/sodium_compat/2` - `204f36fb236065964964a61d4d7b1b9c`
+- `shop[.]artaffinittee[.]com`'s IP address of `68[.]183[.]232[.]255`
+
+Let's first see if anyone else went that IP address, which they didn't, so we can list that as an indicator, but there's nothing else to dig in there (we'll do some IP analysis towards the end).
+
+![](/images/3-20-20-11.png)
+
+Grabbing the packets for `/wp-includes/sodium_compat/{1,2}`, we can see that we're dealing with a binary file that we can probably do some analysis of.
+
+![](/images/3-20-20-12.png)
+
+When pulling the files apart, they're binary files but they seem like they're into the RE category, which is beyond my capabilities. Of note, they are listed as indicators by a DigitalSide OSINT TI list.
+```
+"2767": {
+    "md5": "19fe0b844a00c57f60a0d9d29e6974e7",
+    "sha1": "3505b4a6cd2f1bf3cb3628b9e3eb25c940ab559a",
+    "sha256": "d1e56e455e3a50d8e461665e46deb1979a642b32710433f59e7a16fb5e4abada",
+    "url": [
+        "http://beta.artaffinittee.com/wp-includes/fonts/1" <- note different URI, but same file
+    ]
+},
+"2768": {
+    "md5": "204f36fb236065964964a61d4d7b1b9c",
+    "sha1": "b383d4aedea5de89a73d2cfda9d3bfdef94540ea",
+    "sha256": "4c8c3005642b01eb3db098b34ce3c7a089f12566bd67a7720c48e2fe751bfcb1",
+    "url": [
+        "http://beta.artaffinittee.com/wp-includes/fonts/2" <- note different URI, but same file
+    ]
+```
+
+![](/images/3-20-20-13.png)
 
 ## Detection Logic
 [Additional analysis, modeling, and signatures (KQL and Yara)](https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md).
@@ -121,12 +160,18 @@ As it would turn out, it looks like someone has already submitted this to [Virus
 ## Artifacts
 ```
 45[.]153[.]73[.]33 - Pony Downloader C2
+thumbeks[.]com - Pony Downloader C2
 /4/forum[.]php - Hancitor C2
-/d2/about[.]php - Hancitor C2
-/mlu/forum[.]php - Hancitor C2
-freetospeak[.]me
-shop[.]artaffinittee[.]com
-8eb933c84e7777c7b623f19489a59a2a - VBScript dropper
+/d2/about[.]php - Pony Downloader C2
+/mlu/forum[.]php - Pony Downloader C2
+freetospeak[.]me - Initial Infection
+68[.]208[.]77[.]171 - Initial Infection
+shop[.]artaffinittee[.]com - Part of Hancitor infrastructure
+68[.]183[.]232[.]255 - Part of Hancitor infrastructure
+5c9c955449d010d25a03f8cef9d96b41 - VBScript archive (0843_43.php)
+8eb933c84e7777c7b623f19489a59a2a - VBScript dropper (SE670131329809.vbs)
+19fe0b844a00c57f60a0d9d29e6974e7 - Part of Hancitor infrastructure (1)
+204f36fb236065964964a61d4d7b1b9c - Part of Hancitor infrastructure (2)
 ```
 
 Until next time, cheers and happy hunting!
