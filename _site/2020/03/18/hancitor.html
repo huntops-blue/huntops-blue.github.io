@@ -1,10 +1,60 @@
-I"�B<h1 id="3202020---hancitor-infection-wcoronavirus-themed-malspam">3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam</h1>
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>3/20/2020 - Hancitor w/Coronavirus Themed Malspam | HuntOps</title>
+<meta name="generator" content="Jekyll v4.0.0" />
+<meta property="og:title" content="3/20/2020 - Hancitor w/Coronavirus Themed Malspam" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam Packets Hancitor Downloader background (AKA Chanitor)" />
+<meta property="og:description" content="3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam Packets Hancitor Downloader background (AKA Chanitor)" />
+<link rel="canonical" href="http://localhost:4000/2020/03/18/hancitor.html" />
+<meta property="og:url" content="http://localhost:4000/2020/03/18/hancitor.html" />
+<meta property="og:site_name" content="HuntOps" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-03-18T00:00:00-05:00" />
+<script type="application/ld+json">
+{"url":"http://localhost:4000/2020/03/18/hancitor.html","headline":"3/20/2020 - Hancitor w/Coronavirus Themed Malspam","dateModified":"2020-03-18T00:00:00-05:00","datePublished":"2020-03-18T00:00:00-05:00","description":"3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam Packets Hancitor Downloader background (AKA Chanitor)","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2020/03/18/hancitor.html"},"@type":"BlogPosting","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="/assets/js/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="/assets/css/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>HuntOps</h1>
+          <p></p>
+          <hr>
+        </div>
+
+        <h1 id="3202020---hancitor-infection-wcoronavirus-themed-malspam">3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam</h1>
 <ul>
   <li><a href="http://malware-traffic-analysis.net/2020/03/11/index.html">Packets</a></li>
   <li><a href="https://www.cyber.nj.gov/threat-profiles/trojan-variants/hancitor">Hancitor Downloader background (AKA Chanitor)</a></li>
 </ul>
 
-<p>Unless you’ve been living under a rock, you’re aware of the global COVID-19 pandemic, also known as Coronavirus…actually…even if you’re under a rock, you’re still likely aware. Adversaries commonly capitalize on these type of events for their malspam lures, <a href="https://krebsonsecurity.com/2020/03/live-coronavirus-map-used-to-spread-malware/">COVID is no different</a>. If the bad guys are using this, as defenders, we need to be prepared. In this situation, malspam is used to distribute the Hancitor (Chanitor) downloader.</p>
+<p>Unless you’ve been living under a rock, you’re aware of the global COVID-19 pandemic, also known as Coronavirus…actually…even if you’re under a rock, you’re still likely aware. Adversaries commonly capitalize on these type of events for their malspam lures, <a href="https://krebsonsecurity.com/2020/03/live-coronavirus-map-used-to-spread-malware/">COVID is no different</a>. If the bad guys are using this, as defenders, we need to be prepared. In this situation, malspam is used to distribute the Hancitor (Chanitor) downloader. @mesa_matt reported this wave of COVID malspam <a href="https://twitter.com/mesa_matt/status/1237808758669094913">here</a> and then by <a href="https://isc.sans.edu/forums/diary/Hancitor+distributed+through+coronavirusthemed+malspam/25892/">SANS</a>.</p>
 
 <p>We’ll start over on the Suricata dashboard to see if anything look suspicious, and as per normal, we have a hint of where to start with the <code class="highlighter-rouge">ET MALWARE Fareit/Pony Downloader Checkin 2</code> alert. As we commonly see with these infections, adversaries commonly do an external IP lookup to see where they are and/or to validate they’ve infected the right victim (for targeted intrusions); that said, remember that an external IP lookup, while interesting, isn’t a smoking gun - so we’ll put that in the evidence pile, but not “this == that”.</p>
 
@@ -22,14 +72,20 @@
 
 <p>Applying different filters to this dashboard shows that only <code class="highlighter-rouge">10.3.11.101</code> and <code class="highlighter-rouge">45[.]153[.]73[.]33</code> are the only two systems talking back and forth with <code class="highlighter-rouge">thumbeks[.]com</code>, so lets look in the Discover app to learn a bit more.</p>
 
-<p>I’ve searched on the host that we’re interested in and applied the <code class="highlighter-rouge">http</code> dataset filter. Of note, I’ve added fields that I’m most interested in source IP, URL, etc. but I’ve also added the <code class="highlighter-rouge">Query PCAP</code> field so that I can use that to quickly carve the packets using Docket and Stenographer, both built into RockNSM. This traffic is over port 80 and likely unencrypted, so we should be able to get some good data from it. Finally, we’ll know more when we look at the HTTP headers, but the HTTP Method is a POST, so this is likely data exfil of some type.</p>
+<p>I’ve searched on the host that we’re interested in and applied the <code class="highlighter-rouge">http</code> dataset filter. Of note, I’ve added fields that I’m most interested in source IP, URL, etc. but I’ve also added the <code class="highlighter-rouge">Query PCAP</code> field so that I can use that to quickly carve the packets using Docket and Stenographer, both built into RockNSM. This traffic is over port 80 and likely unencrypted, so we should be able to get some good data from it. Finally, we’ll know more when we look at the HTTP headers, but the HTTP Method is a POST, so this is likely data exfil or checkin of some type.</p>
 
 <p><img src="/images/3-20-20-4.png" alt="" /></p>
 
 <p>I’ll carve the PCAPs for <code class="highlighter-rouge">/4/forum[.]php</code>, <code class="highlighter-rouge">/d2/about[.]php</code>, and <code class="highlighter-rouge">/mlu/forum[.]php</code> to analyze them.</p>
 
 <p>Right off the bat with the first <code class="highlighter-rouge">/4/forum[.]php</code>, we can see that this is uploading a GUID and build number of the implant along with the hostname (<code class="highlighter-rouge">[redacted]-WIN10</code>), the userID (<code class="highlighter-rouge">[redacted]-WIN10\[username]</code>) and the host IP address (<code class="highlighter-rouge">IP=[redacted]</code>) along with a Base64 encoded string</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NMNMARZAEg4OCkBVVQkSFQpUGwgOGxwcExQTDg4fH1QZFRdVDQpXExQZFg8eHwlVCRUeEw8XJRkVFwobDlVLBhIODgpAVVUYHw4bVBsIDhscHBMUEw4OHx9UGRUXVQ0KVxMUGRYPHh8JVRwVFA4JVUsGEg4OCglAVVUJEwkJVBkVVBMUVUsGEg4OCkBVVRcTGQgVGBYbHhMUHREPFg8YD1QZFRdVSwYSDg4KQFVVCQ4VGREXGwgRHw4IHwwVFg8OExUUVBkVF1VLBwEYQBIODgpAVVUJEhUKVBsIDhscHBMUEw4OHx9UGRUXVQ0KVxMUGRYPHh8JVQkVHhMPFyUZFRcKGw5VSAYSDg4KQFVVGB8OG1QbCA4bHBwTFBMODh8fVBkVF1UNClcTFBkWDx4fCVUcFRQOCVVIBhIODgoJQFVVCRMJCVQZFVQTFFVIBhIODgpAVVUXExkIFRgWGx4TFB0RDxYPGA9UGRUXVUgGEg4OCkBVVQkOFRkRFxsIER8OCB8MFRYPDhMVFFQZFRdVSAc=
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NMNMARZAEg4OCkBVVQkSFQpUGwgOGxwcExQTDg4fH1QZFRdVDQpXExQZFg8eHwlVCRUeEw8XJRkVFwo
+bDlVLBhIODgpAVVUYHw4bVBsIDhscHBMUEw4OHx9UGRUXVQ0KVxMUGRYPHh8JVRwVFA4JVUsGEg4OCg
+lAVVUJEwkJVBkVVBMUVUsGEg4OCkBVVRcTGQgVGBYbHhMUHREPFg8YD1QZFRdVSwYSDg4KQFVVCQ4VG
+REXGwgRHw4IHwwVFg8OExUUVBkVF1VLBwEYQBIODgpAVVUJEhUKVBsIDhscHBMUEw4OHx9UGRUXVQ0K
+VxMUGRYPHh8JVQkVHhMPFyUZFRcKGw5VSAYSDg4KQFVVGB8OG1QbCA4bHBwTFBMODh8fVBkVF1UNClc
+TFBkWDx4fCVUcFRQOCVVIBhIODgoJQFVVCRMJCVQZFVQTFFVIBhIODgpAVVUXExkIFRgWGx4TFB0RDx
+YPGA9UGRUXVUgGEg4OCkBVVQkOFRkRFxsIER8OCB8MFRYPDhMVFFQZFRdVSAc=
 </code></pre></div></div>
 <p>This is followed by posting binary files from <code class="highlighter-rouge">/d2/about[.]php</code> and <code class="highlighter-rouge">/mlu/forum[.]php</code></p>
 
@@ -39,23 +95,23 @@
 
 <p>After the initial <code class="highlighter-rouge">/4/forum[.]php</code> + <code class="highlighter-rouge">/d2/about[.]php</code> + <code class="highlighter-rouge">/mlu/forum[.]php</code>, there are 3 more POSTs to <code class="highlighter-rouge">/4/forum[.]php</code> which have 2 different Base64 encoded strings (<code class="highlighter-rouge">CMNXARRABw==</code> and <code class="highlighter-rouge">AZAZARRABw==</code>). In checking online for those strings, there was 1 link to <a href="https://www.hybrid-analysis.com/sample/fdbc89d95c002985f71ef3a8471bded05e71559874f36dd12186def8eef73e81?environmentId=100">Hybrid-Analysis</a> for a Hancitor analysis from 2018 (we knew this was Hancitor already, but this is the first evidence pointing us that direction).</p>
 
-<p>So, let’s remove <code class="highlighter-rouge">thumbeks[.]com</code>, <code class="highlighter-rouge">/4/forum[.]php</code>, <code class="highlighter-rouge">/d2/about[.]php</code>, and <code class="highlighter-rouge">/mlu/forum[.]php</code> and move onto other suspicious traffic.</p>
+<p>Now that we have a good hit regarding <code class="highlighter-rouge">thumbeks[.]com</code>, let’s remove <code class="highlighter-rouge">thumbeks[.]com</code>, <code class="highlighter-rouge">/4/forum[.]php</code>, <code class="highlighter-rouge">/d2/about[.]php</code>, and <code class="highlighter-rouge">/mlu/forum[.]php</code> and move onto other suspicious traffic.</p>
 
-<p>When looking at the remaining traffic, it became pretty obvious that there was more that I could just sift through the Discover app and honestly say I found bad traffic. So, let’s focus on DNS, use a data table visualization, and remove the IP lookup API (<code class="highlighter-rouge">api.ipify.org</code> and <code class="highlighter-rouge">thumbeks[.]com</code>…ah, 2 entries and we now have 4 additional indicators to research to see if they are bad (2 hosts, 2 IPs)</p>
+<p>When looking at the remaining traffic, it became pretty obvious that there was more than I could just sift through in the Discover app and honestly say I found bad traffic. So, let’s focus on DNS, use a data table visualization, and remove the IP lookup API (<code class="highlighter-rouge">api.ipify.org</code> and <code class="highlighter-rouge">thumbeks[.]com</code>…ah, 2 entries and we now have 4 additional indicators to research to see if they are bad (2 hosts, 2 IPs)</p>
 
 <p><img src="/images/3-20-20-8.png" alt="" /></p>
 
-<p>Lets start with the hosts (<code class="highlighter-rouge">freetospeak[.]me</code> and <code class="highlighter-rouge">shop[.]artaffinittee[.]com</code>) and see what else we know about them. Right off the bat, looking at the DNS, domains, and files, we can see that there is a file located at <code class="highlighter-rouge">freetospeak[.]me/0843_43[.]php</code>, but the filename is <code class="highlighter-rouge">SE-670131329809_5500[.]zip</code>.</p>
+<p>Lets start with the hosts (<code class="highlighter-rouge">freetospeak[.]me</code> and <code class="highlighter-rouge">shop[.]artaffinittee[.]com</code>) and see what else we know about them. Looking at the DNS, domains, and files, we can see that there is a file located at <code class="highlighter-rouge">freetospeak[.]me/0843_43[.]php</code>, but the filename is <code class="highlighter-rouge">SE-670131329809_5500[.]zip</code>.</p>
 
 <p><img src="/images/3-20-20-9.png" alt="" /></p>
 
 <p>Before we move further into <code class="highlighter-rouge">freetospeak[.]me</code>, let’s look at that IP address (<code class="highlighter-rouge">8[.]208[.]77[.]171</code>) and see if anyone else communicated with that IP and no one did. This is the proper process for analysis, but sometimes there’s not any additional data.</p>
 
-<p>Moving on, we’ll grab the packets to see what’s there, but in doing a quick Google search for <code class="highlighter-rouge">0843_43.php</code> I can see that <a href="https://urlhaus.abuse.ch/url/323970/">Abuse.ch</a> has listed some of the payloads that are delivered from this URI and they follow what we’ve observed - two capital letters, a dash, 12 numbers, and underscore, 4 numbers, and a zip file extension. We’ll have a regex search in the Detection Logic section, but lets check out the packets.</p>
+<p>Moving on, we’ll grab the packets to see what’s there, but in doing a quick Google search for <code class="highlighter-rouge">0843_43.php</code> I can see that <a href="https://urlhaus.abuse.ch/url/323970/">Abuse.ch</a> has listed some of the payloads that are delivered from this URI and they follow what we’ve observed - two capital letters, a dash, 12 numbers, an underscore, 4 numbers, and a zip file extension. We’ll have a regex search in the Detection Logic section, but lets check out the packets.</p>
 
 <p><img src="/images/3-20-20-10.png" alt="" /></p>
 
-<p>Lets use the Export HTTP Object of Wireshark to grab that file so we can do some additional analysis. Running the file command, we see that this isn’t a PHP file, but a zip archive (we assumed that based on the file.name field in ROCK, but that’s why we check).</p>
+<p>Lets use the Export HTTP Object of Wireshark to grab that file so we can do some additional analysis. Running the <code class="highlighter-rouge">file</code> command, we see that this isn’t a PHP file, but a zip archive (we assumed that based on the file.name field in ROCK, but that’s why we check).</p>
 
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/usr/bin/file 0843_43.php
 0843_43.php: Zip archive data, at least v2.0 to extract
@@ -84,7 +140,7 @@ Zip Compressed Size             : 230297
 Zip Uncompressed Size           : 1130515
 Zip File Name                   : SE670131329809.vbs
 </code></pre></div></div>
-<p>We can see that the <code class="highlighter-rouge">Zip File Name</code> has <code class="highlighter-rouge">SE670131329809.vbs</code>. Interesting! Let’s list the contents of the zip file and see if there’s anything else interesting in there.</p>
+<p>We can see that the <code class="highlighter-rouge">Zip File Name</code> contains <code class="highlighter-rouge">SE670131329809.vbs</code>. Interesting! Let’s list the contents of the zip file and see if there’s anything else interesting in there.</p>
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/usr/bin/unzip -l 0843_43.php
 Archive:  0843_43.php
   Length      Date    Time    Name
@@ -106,7 +162,7 @@ MD5 (SE670131329809.vbs) = 8eb933c84e7777c7b623f19489a59a2a
 
 <p>Now that we’ve got a solid line between IPIFY and our infected host, so let’s see who communicated with that external service. It doesn’t look like anyone beyond our known infected host did, but this is an example of connecting something suspicious to known bad. We don’t do figurative hand-waving here, so it was good to make that association.</p>
 
-<p>Okay, moving on to <code class="highlighter-rouge">shop[.]artaffinittee[.]com</code>, which as a reminder, we identified this by profiling DNS traffic above and found <code class="highlighter-rouge">freetospeak[.]me</code>.</p>
+<p>Okay, moving on to <code class="highlighter-rouge">shop[.]artaffinittee[.]com</code>, which as a reminder, we identified this by profiling DNS traffic above.</p>
 
 <p>There are three things that we can dig into:</p>
 
@@ -142,12 +198,13 @@ MD5 (SE670131329809.vbs) = 8eb933c84e7777c7b623f19489a59a2a
     ]
 </code></pre></div></div>
 
+<h2 id="summary">Summary</h2>
+<p>So, using ROCK, we identified a malicious domain that led us all the way back through the compromise to the initial point of infection and collected several observations along the way. Check out the detection logic for signatures and analysis.</p>
+
 <p><img src="/images/3-20-20-13.png" alt="" /></p>
 
 <h2 id="detection-logic">Detection Logic</h2>
-<p><a href="https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md">Additional analysis, modeling, and signatures (KQL and Yara)</a>.</p>
-
-<p><code class="highlighter-rouge">[A-Za-z]{2}-[0-9]{12}_[0-9]{4}.zip</code> &lt;- Andy, this is for SE-670131329809_5500[.]zip</p>
+<p><a href="https://github.com/huntops-blue/detection-logic/blob/master/hancitor.md">Additional analysis, modeling, and signatures (KQL and Yara)</a>.</p>
 
 <h2 id="artifacts">Artifacts</h2>
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>45[.]153[.]73[.]33 - Pony Downloader C2
@@ -166,4 +223,21 @@ shop[.]artaffinittee[.]com - Part of Hancitor infrastructure
 </code></pre></div></div>
 
 <p>Until next time, cheers and happy hunting!</p>
-:ET
+
+
+      </section>
+
+    </div>
+
+    
+      <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+        ga('create', 'UA-158770799-1', 'auto');
+        ga('send', 'pageview');
+      </script>
+    
+  </body>
+</html>
