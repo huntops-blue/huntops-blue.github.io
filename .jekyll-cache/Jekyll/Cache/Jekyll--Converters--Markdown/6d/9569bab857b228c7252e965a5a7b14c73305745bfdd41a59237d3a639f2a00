@@ -1,0 +1,93 @@
+I"�<h1 id="installing-rocknsm">Installing RockNSM</h1>
+<p>This isn’t a full walkthrough, it’s meant to be a quick and dirty quick-start.</p>
+
+<p>If you already have ROCK installed and just need to understand getting test data in, skip to <a href="https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock">the end</a>.</p>
+
+<h1 id="preparation">Preparation</h1>
+<p>Do this to get started.</p>
+<ol>
+  <li>Download the latest <a href="https://download.rocknsm.io/isos/stable/">ROCK ISO</a></li>
+  <li>Download a hypervisor (I’ll walk through VMWare Fusion and VirtualBox, but there are many options)
+    <ul>
+      <li><a href="https://www.vmware.com/products/fusion/fusion-evaluation.html">VMWare Fusion</a> (paid) <strong>or</strong> <a href="https://www.virtualbox.org/wiki/Downloads">VirtualBox</a> (free)</li>
+    </ul>
+  </li>
+</ol>
+
+<h1 id="installation">Installation</h1>
+<p>Select the right hypervisor you’re using.</p>
+
+<ul>
+  <li><a href="https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#vmware-fusion-installation-instructions">VMWare Fusion</a></li>
+  <li><a href="https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#virtualbox-installation-instructions">VirtualBox</a></li>
+</ul>
+
+<h2 id="vmware-fusion-installation-instructions">VMWare Fusion Installation Instructions</h2>
+<p>If you’re using VirtualBox, go to those <a href="https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#virtualbox-installation-instructions">instructions</a></p>
+
+<ol>
+  <li>Install VMWare Fusion</li>
+  <li>Create a New virtual Machine</li>
+  <li>Select Install from disc or image</li>
+  <li>Select the ROCK ISO you downloaded</li>
+  <li>Select Legacy BIOS or UEFI (it doesn’t really matter for this)</li>
+  <li>Click “Customize Settings”</li>
+  <li>Click on “Processors &amp; Memory”, set 4 processor cores and <code class="highlighter-rouge">12288</code> MB</li>
+  <li>Click on “Add Device”, add another Network Adapter</li>
+  <li>Click on “Hard Disk”, move it to <code class="highlighter-rouge">50.00</code> GB or more</li>
+  <li>Move onto <a href="https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#deploy-rock">deploying ROCK</a></li>
+</ol>
+
+<h2 id="virtualbox-installation-instructions">VirtualBox Installation Instructions</h2>
+<p>If you’re using VMWare Fusion, go to those <a href="https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#vmware-fusion-installation-instructions">instructions</a></p>
+
+<ol>
+  <li>Install VirtualBox</li>
+  <li>Create a New Virtual Machine, Type: “Linux”, Version: “Red Hat (64-bit)”</li>
+  <li>Memory size: <code class="highlighter-rouge">12288</code></li>
+  <li>Accept the defaults for Hard disk, make the size <code class="highlighter-rouge">50.00</code> Gb or more</li>
+  <li>Select the new VM, click on “Settings”</li>
+  <li>In Processor, change to <code class="highlighter-rouge">4</code></li>
+  <li>In Storage, click on the “CD” icon, then on the “CD” icon next to “Optical Drive”, “Choose a disk file…” and select the ROCK ISO you downloaded</li>
+  <li>In Network, click on Adapter 1, click on Port Forwarding</li>
+  <li>Add one for HTTPS, Host IP: <code class="highlighter-rouge">127.0.0.1</code>, Host Port: <code class="highlighter-rouge">4443</code>, Guest IP: <code class="highlighter-rouge">10.0.2.15</code>, Guest Port: <code class="highlighter-rouge">443</code></li>
+  <li>Add one for SSH, Host IP: <code class="highlighter-rouge">127.0.0.1</code>, Host Port: <code class="highlighter-rouge">2222</code>, Guest IP: <code class="highlighter-rouge">10.0.2.15</code>, Guest Port: <code class="highlighter-rouge">22</code></li>
+  <li>In Network, click on Adapter 2, enable it, and set it to “Internal Network”</li>
+  <li>Move onto <a href="https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#deploy-rock">deploying ROCK</a></li>
+</ol>
+
+<h1 id="deploy-rock">Deploy ROCK</h1>
+<p>Now that we’ve prepped the hypervisors, let’s install ROCK.</p>
+
+<ol>
+  <li>Start the VM</li>
+  <li>Select “Automated install of ROCK x.x.x-xxxx”</li>
+  <li>Click on “USER CREATION”, make sure you check the “Make this user administrator” box</li>
+  <li>Type <code class="highlighter-rouge">c</code> to continue</li>
+  <li>Log in and type <code class="highlighter-rouge">sudo rock setup</code> to launch the Text User Interface (TUI)</li>
+  <li>Navigate through the menu items, generally speaking, you can just use the defaults for the Interfaces, setting Management IP, Online or Offline, enable all components</li>
+  <li>Write Config</li>
+  <li>Run Installer - this takes about 10 minutes</li>
+</ol>
+
+<h1 id="getting-data-into-rock">Getting Data Into ROCK</h1>
+<p>Finally, let’s get data into ROCK.</p>
+
+<p>Download some malicious pcap. I like to use <a href="https://www.malware-traffic-analysis.net">Malware Traffic Analysis</a>
+Example:</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl -OL [malware file.pcap.zip]
+unzip [file.pcap.zip] (password: infected)
+sudo tcpreplay -t -i [monitor interface] [file.pcap]
+</code></pre></div></div>
+<p><em>Note: the <code class="highlighter-rouge">-t</code> flag in <code class="highlighter-rouge">tcpreplay</code> will fire the traffic all at once and may overrun you network socket buffer and cause you to drop traffic. Remove the <code class="highlighter-rouge">-t</code> flag if you have this issue, but <code class="highlighter-rouge">tcpreplay</code> will run for as long as it took the pcap to be captured - so a 2 hour pcap will take 2 hours to replay.</em></p>
+
+<h1 id="logging-into-rock">Logging into ROCK</h1>
+<p>In the home directory of the user you created during the installation, there is a file called <code class="highlighter-rouge">KIBANA_CREDENTIALS.txt</code>. In there you’ll find your username and passphrase.</p>
+
+<p>Browse to <code class="highlighter-rouge">https://ROCK_IP_ADDRESS</code> and use the Kibana credentials to log in.</p>
+
+<p>Pop over to the <a href="https://huntops.blue">blog</a> for pcap examples in ROCK.</p>
+
+<h1 id="troubleshooting">Troubleshooting</h1>
+<p>If you run into issues, feel free to check out the <a href="https://docs.rocknsm.io">ROCK documentation</a>, the <a href="https://community.rocknsm.io">ROCK community page</a>, or the <a href="https://github.com/rocknsm/rock">ROCK Github page</a>.</p>
+:ET
