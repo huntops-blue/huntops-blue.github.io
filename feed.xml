@@ -14,7 +14,7 @@ layout: null
         {% for post in site.tags["feed"] %}
             <item>
                 <title>{{ post.title | xml_escape }}</title>
-                <author>your_blog_email@host.com (Your Name)</author>
+                <author>Andrew D. Pease</author>
                 <description>{{ post.content | xml_escape }}</description>
                 <pubDate>{{ post.date | date_to_rfc822 }}</pubDate>
                 <link>{{ post.url | prepend: site.baseurl | prepend: site.url }}</link>
@@ -29,4 +29,3 @@ layout: null
         {% endfor %}
     </channel>
 </rss>
-
