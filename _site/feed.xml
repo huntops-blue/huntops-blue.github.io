@@ -1,0 +1,675 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>HuntOps</title>
+        <description></description>
+        <link>http://localhost:4000/</link>
+        <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
+        <pubDate>Wed, 18 Mar 2020 16:17:04 -0500</pubDate>
+        <lastBuildDate>Wed, 18 Mar 2020 16:17:04 -0500</lastBuildDate>
+        <generator>Jekyll v4.0.0</generator>
+        
+            <item>
+                <title>3/6/2020 - Trickbot Infection</title>
+                <author>Andrew D. Pease</author>
+                <description>&lt;h1 id=&quot;362020---trickbot&quot;&gt;3/6/2020 - Trickbot&lt;/h1&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;http://malware-traffic-analysis.net/2020/02/25/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://unit42.paloaltonetworks.com/trickbot-campaign-uses-fake-payroll-emails-to-conduct-phishing-attacks/&quot;&gt;Trickbot information stealer background&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.fireeye.com/blog/threat-research/2019/01/a-nasty-trick-from-credential-theft-malware-to-business-disruption.html&quot;&gt;gtag information stealer background&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;We’ve done a Trickbot analysis before, but when I started poking around on this one, I found some indicators that weren’t being detected by Suricata and in pulling that thread, found indicators that hadn’t been previously reported anywhere, to include the binaries that I’ve carved from PCAP. By the publish date, there could be others who’ve found this, but as I’m starting this post (3/3/20), these haven’t been identified elsewhere.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Note: I changed the way I replayed my traffic this time by removing the &lt;code class=&quot;highlighter-rouge&quot;&gt;-t&lt;/code&gt; flag from &lt;code class=&quot;highlighter-rouge&quot;&gt;tcpreplay&lt;/code&gt;. While this takes much longer (2 1/2 hours in this specific case), but it makes for a better view of the event pattern of life.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s start with the known knowns - Suricata.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-8-20-1.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Note: Curl, &lt;code class=&quot;highlighter-rouge&quot;&gt;myexternalip[.]com&lt;/code&gt;, and &lt;code class=&quot;highlighter-rouge&quot;&gt;ipecho[.]net&lt;/code&gt; are called out by Suricata, we know they’re bad because these PCAPs are bad and we’ve seen them used in other Trickbot infections, but we’re not going to sandbag and add them as “known bad” unless we can connect it to malicious traffic.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Walking through the image, we have &lt;code class=&quot;highlighter-rouge&quot;&gt;ET HUNTING GENERIC SUSPICIOUS POST to Dotted Quad with Fake Browser 1&lt;/code&gt; as the highest. This signature is seen with a lot of trojans and is more of an “this event could be interesting” vs. a smoking gun. Applying this alert as a filter, we see the host &lt;code class=&quot;highlighter-rouge&quot;&gt;10.22.33.145&lt;/code&gt; is the source - which we can see (with no filters) makes up for 232 events, so I’m going to lean to say &lt;code class=&quot;highlighter-rouge&quot;&gt;10.22.33.145&lt;/code&gt; is a good host to focus on.&lt;/p&gt;
+
+&lt;p&gt;The next alert is &lt;code class=&quot;highlighter-rouge&quot;&gt;ET CNC Feodo Tracker Reported CnC Server group x&lt;/code&gt;, there are several of those for different “groups”. Filtering on them individually, it’s also &lt;code class=&quot;highlighter-rouge&quot;&gt;10.22.33.145&lt;/code&gt; as the infected host. With the volume here, I’m going to pop over and make a simple data table with &lt;code class=&quot;highlighter-rouge&quot;&gt;destination.ip&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;source.ip&lt;/code&gt;, and &lt;code class=&quot;highlighter-rouge&quot;&gt;alert.signature&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Of note, there are 4 ports involved here, &lt;code class=&quot;highlighter-rouge&quot;&gt;447&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;449&lt;/code&gt; (both TLS) look pretty uniform across the alerts, but &lt;code class=&quot;highlighter-rouge&quot;&gt;443&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;8082&lt;/code&gt;, while hitting the same signature, appear to be different stages in the event, so we’ll take note of those and poke at those later.&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Destination IP&lt;/th&gt;
+      &lt;th&gt;Source IP&lt;/th&gt;
+      &lt;th&gt;Signature&lt;/th&gt;
+      &lt;th&gt;Tag&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;186[.]71[.]150[.]23&lt;/td&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 10&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;190[.]214[.]13[.]2&lt;/td&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 12&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;195[.]133[.]145[.]31&lt;/td&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 13&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;5[.]2[.]77[.]18&lt;/td&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 19&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;85[.]143[.]216[.]206&lt;/td&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 23&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;66[.]85[.]173[.]20&lt;/td&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 20&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;93[.]189[.]41[.]185&lt;/td&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 25&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;203[.]176[.]135[.]102&lt;/td&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 15&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Eliminating those Feodo Tracker hits, what else is Suricata telling us?&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-8-20-2.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;In filtering out the above Feodo signatures, there was 1 other IP address that we’d not identified previously as well as the one that used port &lt;code class=&quot;highlighter-rouge&quot;&gt;8082&lt;/code&gt; (&lt;code class=&quot;highlighter-rouge&quot;&gt;192[.]3[.]124[.]40&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;203[.]176[.]135[.]102&lt;/code&gt;, respectfully). Additionally, there was some high-port to high-port communication coming from &lt;code class=&quot;highlighter-rouge&quot;&gt;192[.]3[.]124[.]40&lt;/code&gt;, which is interesting.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-8-20-3.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s get out of the “known bad” identified by signatures, and go over to the Discover tab to see what else we can find out about the traffic. Let’s start with Zeek data and just those 2 IP addresses&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;event.module: zeek AND (source.ip: 192[.]3[.]124[.]40 OR destination.ip: 192[.]3[.]124[.]40 OR source.ip: 203[.]176[.]135[.]102 OR destination.ip: 203[.]176[.]135[.]102)&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;When we organize the data this way, we can see 2 connection groups that look the most interesting:&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Source IP&lt;/th&gt;
+      &lt;th&gt;Destination IP&lt;/th&gt;
+      &lt;th&gt;Interesting Item&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;203[.]176[.]135[.]102&lt;/td&gt;
+      &lt;td&gt;Suricata hits w/port 8082&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;192[.]3[.]124[.]40&lt;/td&gt;
+      &lt;td&gt;Suricata hits w/PE downloads&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;I’ll target the unencrypted traffic and pull some packets out and do some analysis.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-8-20-4.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s start with the PE downloads. There are 2 ways to collect them:&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;Carve from PCAP w/Docket&lt;/li&gt;
+  &lt;li&gt;Leverage the file extraction feature of Zeek.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;These have names that we’ve seen in my previous analysis of &lt;a href=&quot;https://github.com/huntops-blue/huntops-blue.github.io/blob/master/index.md#2212020---trickbot-gtag-wecan23-infection&quot;&gt;Trickbot&lt;/a&gt;, (&lt;code class=&quot;highlighter-rouge&quot;&gt;mini[.]png&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;lastimage[.]png&lt;/code&gt; x2). Of note, these samples are not in VirusTotal as of 3/3/2020. Their hashes are in the Artifacts section as well as Yara signatures in the &lt;a href=&quot;https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md&quot;&gt;Detection Logic&lt;/a&gt;. This looks to be Trickbot traffic.&lt;/p&gt;
+
+&lt;p&gt;Moving onto &lt;code class=&quot;highlighter-rouge&quot;&gt;203[.]176[.]135[.]102&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-8-20-5.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;We can see that the HTTP POST connections appear to be uploading some data &lt;code class=&quot;highlighter-rouge&quot;&gt;/red4/DESKTOP-5N98NBB_W10018363.8DB232C0E83418B2F3D90BF34165F326/81/&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;/red4/DESKTOP-5N98NBB_W10018363.8DB232C0E83418B2F3D90BF34165F326/90&lt;/code&gt; (&lt;code class=&quot;highlighter-rouge&quot;&gt;/90&lt;/code&gt; is provided by Suricata logs, not Zeek). This looks like host identification information to a server named &lt;code class=&quot;highlighter-rouge&quot;&gt;Cowboy&lt;/code&gt; (which we’d also seen in our previous Trickbot analysis).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-8-20-6.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Looking at all of this traffic, it looks like the hash values and infrastructure have been changed from previous intrusions, but not the TTPs used by the aggressor.&lt;/p&gt;
+
+&lt;p&gt;Let’s look back at some of the &lt;code class=&quot;highlighter-rouge&quot;&gt;447&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;449&lt;/code&gt; traffic we identified earlier and see if there are any IPs that we didn’t catch with Suricata…and 3 new IPs that didn’t trip a Suricata alert.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;170[.]84[.]78[.]224&lt;/li&gt;
+  &lt;li&gt;212[.]109[.]220[.]222&lt;/li&gt;
+  &lt;li&gt;85[.]204[.]116[.]84&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-8-20-7.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Looking at them in Discover, there are a lot of failed connections (&lt;code class=&quot;highlighter-rouge&quot;&gt;RSTO/R&lt;/code&gt; - aborted by the originator/responder and &lt;code class=&quot;highlighter-rouge&quot;&gt;S0&lt;/code&gt; a connection attempt seen, but no reply), so let’s add that to the data table and see. Here we’ve got a new IP.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;5[.]255[.]96[.]115&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-8-20-8.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Note: Having reset or failed connection attempts isn’t necessarily a guaranteed bad, but when we’re seeing the same traffic profile (port 447, 449, high-port to high-port) in conjunction with the resets…and some OSINT research also associates them with Trickbot, I’m going to categorize this as “bad”.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;There’s been a lot here, so to round out, I decided to look through the TLS logs to see what we can see. As with all of this, it’s a bit of looking for needles in a needle stack, but the process is the same.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-8-20-9.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;We can see that there is some SSL Subjects that certainly look suspect. When we look at some of the IP addresses, we can see that they’re from known bad actors (ex: &lt;code class=&quot;highlighter-rouge&quot;&gt;85[.]143[.]216[.]206&lt;/code&gt;).&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Source IP&lt;/th&gt;
+      &lt;th&gt;Destination IP&lt;/th&gt;
+      &lt;th&gt;Interesting Item&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;85[.]143[.]216[.]206&lt;/td&gt;
+      &lt;td&gt;CN=example.com&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;5[.]2[.]77[.]18&lt;/td&gt;
+      &lt;td&gt;CN=example.com&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;66[.]85[.]173[.]20&lt;/td&gt;
+      &lt;td&gt;CN=example.com&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;5[.]2[.]77[.]18&lt;/td&gt;
+      &lt;td&gt;CN=vps31656725&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;186[.]71[.]150[.]23&lt;/td&gt;
+      &lt;td&gt;ST=Some-State&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;190[.]214[.]13[.]2&lt;/td&gt;
+      &lt;td&gt;ST=Some-State&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.22.33.145&lt;/td&gt;
+      &lt;td&gt;5[.]182[.]210[.]226&lt;/td&gt;
+      &lt;td&gt;CN=img[.]bullforyou[.]com&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Of extreme note, are &lt;code class=&quot;highlighter-rouge&quot;&gt;5[.]182[.]210[.]226&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;CN=img[.]bullforyou[.]com&lt;/code&gt;. These are new indicators and in searching them online, I wasn’t able to find much research (as of 3/3). In digging into &lt;a href=&quot;https://censys.io/certificates?q=Bullforyou.com&amp;amp;page=1&quot;&gt;the certificate analysis&lt;/a&gt;, you can see that this domain had several subdomains for multiple states. In doing some additional research, this shows up just 2 times (ex: &lt;a href=&quot;https://www.joesandbox.com/analysis/203441/0/pdf&quot;&gt;1&lt;/a&gt;, &lt;a href=&quot;https://www.joesandbox.com/analysis/208271/0/html&quot;&gt;2&lt;/a&gt;), but even though this is in bad PCAP, I’m going to put this into the “bad” category as I really feel like this is C2. If anyone has other observations or opinions, I’d love to hear them.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-8-20-10.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;detection-logic&quot;&gt;Detection Logic&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/huntops-blue/detection-logic/blob/master/trickbot.md&quot;&gt;Additional analysis, modeling, and signatures (KQL and Yara)&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;artifacts&quot;&gt;Artifacts&lt;/h2&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;5[.]2[.]77[.]18 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+5[.]255[.]96[.]115 port 443 (Trickbot, GTAG, Red4 TLS traffic)
+85[.]143[.]216[.]206 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+85[.]143[.]220[.]73 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+186[.]71[.]150[.]23 port 449 (Trickbot, GTAG, Red4 TLS traffic)
+190[.]214[.]13[.]2 port 449 (Trickbot, GTAG, Red4 TLS traffic)
+195[.]133[.]145[.]31 port 443 (Trickbot, GTAG, Red4 TLS traffic)
+66[.]85[.]173[.]20 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+93[.]189[.]41[.]185 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+203[.]176[.]135[.]102 port 8082 (enumeration data exfil)
+192[.]3[.]124[.]40 (port 80, 50063, and 49767 Trickbot PE download)
+170[.]84[.]78[.]224 port 449 (Trickbot, GTAG, Red4 TLS traffic)
+212[.]109[.]220[.]222 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+85[.]204[.]116[.]84 port 447 (Trickbot, GTAG, Red4 TLS traffic)
+5[.]182[.]210[.]226 (Trickbot C2, moderate confidence)
+img[.]bullforyou[.]com (Trickbot C2, moderate confidence)
+9149a43c1fd3c74269648223255d2a83 - lastimage[.]png (Trickbot binaries)
+fed45d3744a23e40f0b0452334826fc2 - lastimage[.]png (Trickbot binaries)
+acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binaries)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Until next time, cheers and happy hunting!&lt;/p&gt;
+</description>
+                <pubDate>Fri, 06 Mar 2020 00:00:00 -0600</pubDate>
+                <link>http://localhost:4000/2020/03/06/trickbot.html</link>
+                <guid isPermaLink="true">http://localhost:4000/2020/03/06/trickbot.html</guid>
+                
+                <category>feed</category>
+                
+                
+            </item>
+        
+            <item>
+                <title>2/28/2020 - Qbot (Qakbot) Infection</title>
+                <author>Andrew D. Pease</author>
+                <description>&lt;h1 id=&quot;2282020---qbot-qakbot&quot;&gt;2/28/2020 - Qbot (Qakbot)&lt;/h1&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;http://malware-traffic-analysis.net/2020/01/29/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://blog.talosintelligence.com/2019/05/qakbot-levels-up-with-new-obfuscation.html&quot;&gt;Qbot banking trojan background&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Unlike in previous posts, Qbot has not generated any Suricata rules, so we get to actually do some raw hunting!&lt;/p&gt;
+
+&lt;p&gt;Personally, I like to start looking at TLS traffic as it forces me to look hard at metadata instead of relying on the contents of packets. We’ll move on to packets later, but let’s start further down the attacker lifecycle and see if we can work our way backwards.&lt;/p&gt;
+
+&lt;p&gt;Of note, I’ve added the &lt;a href=&quot;https://github.com/salesforce/ja3&quot;&gt;ja3&lt;/a&gt; field to assist with this larger dataset. JA3 is a SSL/TLS client fingerprint that allows us to identify scale good (or bad) client/server TLS connections irrespective of the domain that is used. As you can see, two domains have the same &lt;code class=&quot;highlighter-rouge&quot;&gt;ja3&lt;/code&gt; fingerprint but different destination IP addresses and domains. This will help in eliminating traffic to chase by filtering out (or on) that fingerprint instead of every domain/IP combination that could be using it.&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Source IP&lt;/th&gt;
+      &lt;th&gt;Destination IP&lt;/th&gt;
+      &lt;th&gt;tls.client.ja3&lt;/th&gt;
+      &lt;th&gt;tls.server.subject&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.1.29.101&lt;/td&gt;
+      &lt;td&gt;13[.]107[.]9[.]254&lt;/td&gt;
+      &lt;td&gt;9e10692f1b7f78228b2d4e424db3a98c&lt;/td&gt;
+      &lt;td&gt;CN=*[.]msedge[.]net&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10.1.29.101&lt;/td&gt;
+      &lt;td&gt;204[.]79[.]197[.]200&lt;/td&gt;
+      &lt;td&gt;9e10692f1b7f78228b2d4e424db3a98c&lt;/td&gt;
+      &lt;td&gt;CN=www[.]bing[.]com&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-28-20-1.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s filter out the &lt;code class=&quot;highlighter-rouge&quot;&gt;9e10692f1b7f78228b2d4e424db3a98c&lt;/code&gt; ja3 fingerprint (and various others that are part of assumed good for now - yahoo, linkedin, skype, etc.) help get our dataset down to a manageable level (over 300 events down to 95).&lt;/p&gt;
+
+&lt;p&gt;Next, let’s look at the largest number of TLS events, and that is &lt;code class=&quot;highlighter-rouge&quot;&gt;CN=gaevietovp.mobi,OU=Dobubaexo Boolkedm Bmuw,C=ES&lt;/code&gt;, I’ve also added the &lt;code class=&quot;highlighter-rouge&quot;&gt;tls.validation_status&lt;/code&gt; field and, as you can see, it is &lt;code class=&quot;highlighter-rouge&quot;&gt;unable to get local issuer certificate&lt;/code&gt;. That’s not necessarily bad, but it’s different from the other TLS traffic samples we’re looking at.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-28-20-2.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;From here we have some indicators (&lt;code class=&quot;highlighter-rouge&quot;&gt;10.1.29.101&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;68[.]1[.]115[.]106&lt;/code&gt;, and &lt;code class=&quot;highlighter-rouge&quot;&gt;gaevietovp[.]mobi&lt;/code&gt;) that we can take and search through some traffic where we can see more than metadata, however, the only traffic for these hosts was over TLS, so we’ve exhausted the route and can list this as a good find based on the other information we collected above.&lt;/p&gt;
+
+&lt;p&gt;Next, let’s remove our filters and check out the HTTP log and see if there’s anything that’s unencrypted that can we dig through. We’ll again eliminate the assumed good (Microsoft, Windows Update, Symantec, etc.), and check out the &lt;code class=&quot;highlighter-rouge&quot;&gt;url.orginal&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;http.resp_mime_types&lt;/code&gt;. While the filename of &lt;code class=&quot;highlighter-rouge&quot;&gt;4444444.png&lt;/code&gt; is a bit suspect, the fact that it has a file extension of a PNG file, but it has a mime type of &lt;code class=&quot;highlighter-rouge&quot;&gt;application/x-dosexec&lt;/code&gt; is a big red flag.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-28-20-3.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;We’ve got a few options to analyze this file, we can use Docket and carve it from PCAP or we can leverage the file extraction features of Zeek and just grab it right off the sensor.&lt;/p&gt;
+
+&lt;p&gt;Filtering on the &lt;code class=&quot;highlighter-rouge&quot;&gt;files&lt;/code&gt; dataset, we can see what the name of the file is that is on the sensor when we look at the &lt;code class=&quot;highlighter-rouge&quot;&gt;files.extracted&lt;/code&gt; field - &lt;code class=&quot;highlighter-rouge&quot;&gt;HTTP-FQbqYF2UXkZ54fXJXi.exe&lt;/code&gt;. Extracted files are located in &lt;code class=&quot;highlighter-rouge&quot;&gt;/data/zeek/logs/extract_files/&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-28-20-4.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; ll /data/zeek/logs/extract_files/
+total 464
+-rw-r--r--. 1 zeek zeek 475136 Feb 25 16:38 HTTP-FQbqYF2UXkZ54fXJXi.exe
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;If we want to carve that PCAP with Docket, we can do that too…following the TCP stream doesn’t look very good /smh&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-28-20-5.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;So, we’ll Export the HTTP Object (or looked at &lt;code class=&quot;highlighter-rouge&quot;&gt;HTTP-FQbqYF2UXkZ54fXJXi.exe&lt;/code&gt;) and hash and collect the metadata from that file (truncated).&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;...
+File Name                       : 444444.png
+File Type                       : Win32 EXE
+File Type Extension             : exe
+Time Stamp                      : 2020:01:22 15:38:11-06:00
+PE Type                         : PE32
+Internal Name                   : xseja
+Original File Name              : xsejan.dl
+Product Name                    : Xseja
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;There’s some interesting things here that we can use when we make some Yara signatures in the Detection-Logic section below:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;it’s not a PNG file, it’s a Win32 PE file&lt;/li&gt;
+  &lt;li&gt;it was created on Jan 22, 2020&lt;/li&gt;
+  &lt;li&gt;the original file name was &lt;code class=&quot;highlighter-rouge&quot;&gt;xsejan.dl&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Furthermore, the hash of &lt;code class=&quot;highlighter-rouge&quot;&gt;444444.png&lt;/code&gt; (&lt;code class=&quot;highlighter-rouge&quot;&gt;c43367ebab80194fe69258ca9be4ac68&lt;/code&gt;) is loud and proud on &lt;a href=&quot;https://www.virustotal.com/gui/file/56ee803fa903ab477f939b3894af6771aebf0138abe38ae8e3c41cf96bbb0f2a/detection&quot;&gt;VirusTotal&lt;/a&gt; as being Qbot malware.&lt;/p&gt;
+
+&lt;p&gt;Okay, so we’ve got 3 indicators so far, what about the network systems that &lt;code class=&quot;highlighter-rouge&quot;&gt;444444.png&lt;/code&gt; was downloaded from (&lt;code class=&quot;highlighter-rouge&quot;&gt;alphaenergyeng[.]com/wp-content/uploads/2020/01/ahead/444444[.]png&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;5[.]61[.]27[.]159&lt;/code&gt;)? In digging into those 2, it looks like we’ve identified everything that talked to/from those systems.&lt;/p&gt;
+
+&lt;p&gt;Let’s take a look at the URI structure from &lt;code class=&quot;highlighter-rouge&quot;&gt;alphaenergyeng[.]com/wp-content/uploads/2020/01/ahead/444444[.]png&lt;/code&gt; and see if we have any more hits on systems using &lt;code class=&quot;highlighter-rouge&quot;&gt;wp-content/uploads/2020/01/ahead/&lt;/code&gt;, disco another new hit with 2 new indicators (&lt;code class=&quot;highlighter-rouge&quot;&gt;103[.]91[.]92[.]1&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;bhatner[.]com/wp-content/uploads/2020/01/ahead/9312[.]zip&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-28-20-6.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;I wasn’t able to grab &lt;code class=&quot;highlighter-rouge&quot;&gt;9312.zip&lt;/code&gt;, I have the packets, but there are hundreds of files in the TCP stream with the same name with various sizes. I’m not sure if it’s an issue with my pcap or it’s an obfuscation technique. That said, searching for the URL online yielded several analysis results &lt;a href=&quot;https://app.any.run/tasks/13853cd1-4b0f-45e8-bc49-56fafc5043fe/&quot;&gt;1&lt;/a&gt;, &lt;a href=&quot;https://any.run/report/c483c9d30f122c6675b6d61656c27d51f6a3966dc547ff4f64d38e440278030c/13853cd1-4b0f-45e8-bc49-56fafc5043fe&quot;&gt;2&lt;/a&gt;, &lt;a href=&quot;https://unit42.paloaltonetworks.com/tutorial-qakbot-infection/&quot;&gt;3&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-28-20-7.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;In keeping to my mantra of not “finding” things simply because they’re on the IOC list from Malware Traffic Analysis, beyond playing “whack-a-mole” with DNS entries, which I have done before, there wasn’t much additional information I was able to find through raw hunting. I did want to showcase some indicators that Malware Traffic Analysis did highlight, but beyond knowing they were bad because it’s in the IOC list, I don’t think in good consciousness I can say I’d have found it on my own.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-28-20-8.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;detection-logic&quot;&gt;Detection Logic&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/huntops-blue/detection-logic/blob/master/qbot.md&quot;&gt;Additional analysis, modeling, and signatures (KQL and Yara)&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;artifacts&quot;&gt;Artifacts&lt;/h2&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;68[.]1[.]115[.]106 (post infection SSL/TLS traffic)
+gaevietovp[.]mobi (post infection SSL/TLS traffic)
+7dd50e112cd23734a310b90f6f44a7cd (post infection ja3 fingerprint)
+7c02dbae662670040c7af9bd15fb7e2f (post infection ja3s fingerprint)
+5[.]61[.]27[.]159 (HTTP request for Qbot PE)
+alphaenergyeng[.]com (HTTP request for Qbot PE)
+/wp-content/uploads/2020/01/ahead/444444.png (HTTP request for Qbot PE)
+c43367ebab80194fe69258ca9be4ac68 (444444.png - Qbot PE)
+103[.]91[.]92[.]1 (HTTP request for Qbot archive)
+bhatner[.]com (HTTP request for Qbot archive)
+/wp-content/uploads/2020/01/ahead/9312.zip (HTTP request for Qbot archive)
+275ebb5c0264dac2d492efd99f96c8ad (9312.zip - Qbot archive)
+153[.]92[.]65[.]114 (found by Malware Traffic Analysis)
+54[.]36[.]108[.]120 (found by Malware Traffic Analysis)
+pop3[.]arcor[.]de (found by Malware Traffic Analysis)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Until next time, cheers and happy hunting!&lt;/p&gt;
+</description>
+                <pubDate>Fri, 28 Feb 2020 00:00:00 -0600</pubDate>
+                <link>http://localhost:4000/2020/02/28/qbot.html</link>
+                <guid isPermaLink="true">http://localhost:4000/2020/02/28/qbot.html</guid>
+                
+                <category>feed</category>
+                
+                
+            </item>
+        
+            <item>
+                <title>2/24/2020 - Ursnif Infection</title>
+                <author>Andrew D. Pease</author>
+                <description>&lt;h1 id=&quot;2242020---ursnif&quot;&gt;2/24/2020 - Ursnif&lt;/h1&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;http://malware-traffic-analysis.net/2020/02/11/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://attack.mitre.org/software/S0386/&quot;&gt;Qbot banking trojan background&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Suricata has picked up some easy things to get started on, so let’s start there.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-24-20-1.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Of particular interest to me (not that the others aren’t interesting), are the executable signatures; so let’s filter out the &lt;code class=&quot;highlighter-rouge&quot;&gt;opendns[.]com&lt;/code&gt; lookups for now. This takes us down to a single source and destination to focus on, &lt;code class=&quot;highlighter-rouge&quot;&gt;194[.]61[.]2[.]16&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;10.2.11.101&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-24-20-2.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Hopping over to the Discover tab, when we apply the source IP from the previous step, we see only 8 events…definitely manageable. Let’s get rid of the &lt;code class=&quot;highlighter-rouge&quot;&gt;alert&lt;/code&gt; dataset because we know about those from the Suricata dashboard.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-24-20-3.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Now that we’ve used the metadata to get down to a single IP address as the potential bad actor, let’s use Docket to carve the packets for that IP and see what it can tell us. Using Wireshark on these packets, we follow the TCP stream and see this URL and a downloaded PE executable.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-24-20-4.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Exporting the HTTP object gives us the PE file, which we can analyze as well.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-24-20-5.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Using &lt;code class=&quot;highlighter-rouge&quot;&gt;exiftool&lt;/code&gt;, we can see some interesting info, mainly that the original file was called &lt;code class=&quot;highlighter-rouge&quot;&gt;soldier.dll&lt;/code&gt; and that the File Type is &lt;code class=&quot;highlighter-rouge&quot;&gt;Win32 EXE&lt;/code&gt; (truncated).&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;$ exiftool lastimg.png
+...
+File Name                       : 215z9urlgz.php%3fl=xubiz8.cab
+File Type                       : Win32 EXE
+File Type Extension             : exe
+MIME Type                       : application/octet-stream
+Image File Characteristics      : Executable, 32-bit
+PE Type                         : PE32
+Original File Name              : soldier.dll
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Checking with VirusTotal, we see that the file hash is &lt;a href=&quot;https://www.virustotal.com/gui/file/996fcd8c55f923e86477d3d8069f9e9b56c6301cf9b2678c5c5c40bf6a636a5f/detection&quot;&gt;known bad&lt;/a&gt; so this looks like a good find!&lt;/p&gt;
+
+&lt;p&gt;Now that we have a few more hints to search through, specifically &lt;code class=&quot;highlighter-rouge&quot;&gt;qr12s8ygy1[.]com&lt;/code&gt;, let’s go back to Kibana and remove the stuff we’ve already found and see if we can find anything else.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Of note, &lt;code class=&quot;highlighter-rouge&quot;&gt;settings-win.data.microsoft.com&lt;/code&gt; appears to be a Microsoft botnet sinkhole, so while we can use some of the info, I’m going to remove this from our searches to eliminate traffic routes to chase. Additionally, I’m filtering out the OpenDNS traffic.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Moving along, let’s make a Kibana data table to clean up our view a bit and we see &lt;code class=&quot;highlighter-rouge&quot;&gt;95[.]169[.]181[.]35&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;lcdixieeoe[.]com&lt;/code&gt;, of note are those long URI’s + an AVI file. Let’s use Docket to see what’s in those packets.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-24-20-6.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Hopping right into Exporting the HTTP objects, we see the &lt;code class=&quot;highlighter-rouge&quot;&gt;*.avi&lt;/code&gt; files we observed in Kibana’s &lt;code class=&quot;highlighter-rouge&quot;&gt;url.original&lt;/code&gt; field. Let’s save those and take a look.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-24-20-7.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;In looking at the metadata for those “avi” files, we see that they’re actually just Text files.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;======== B.avi
+...
+File Name                       : B.avi
+File Type                       : TXT
+File Type Extension             : txt
+MIME Type                       : text/plain
+...
+======== alSLK.avi
+...
+File Name                       : alSLK.avi
+File Type                       : TXT
+File Type Extension             : txt
+MIME Type                       : text/plain
+...
+======== jNjcj.avi
+...
+File Name                       : jNjcj.avi
+File Type                       : TXT
+File Type Extension             : txt
+MIME Type                       : text/plain
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;I poked and prodded on these files, but I’m not sure what they are…but I know they aren’t normal media files. It looks like Base64 encoding, but I’m not sure what order they’re supposed to be assembled in to decode. Either way, they have the &lt;code class=&quot;highlighter-rouge&quot;&gt;.avi&lt;/code&gt; file extension and certainly aren’t, so I’d put that in the suspect category.&lt;/p&gt;
+
+&lt;p&gt;Extract of &lt;code class=&quot;highlighter-rouge&quot;&gt;B.avi&lt;/code&gt;&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;...
+p1kTy18hM3gcANzilINMVJWdUP4AbxDka8IVGBACN+HkZxzdIOi86DoUwglmVgw+BsGdGC3WLgE45BoaeDFcYxpoS8/HzXcwtxxa45Wiqordymiv5JlqzxHWS647gV2B0XpV1+A5h9PTPvxdfJV/CIAYGgCqFLzlxXF3znojgEGWHj/MwRbhIgMIKm9FDqEQEqxjDIv0SC+sqN9TxpQLNPCdqJwMTuQN2sfat464J1bh9LWzHwPwyZXErBH5+XmvEbIjOX3ptyRJOa4C+W0Cf6yOFLIPWas659a0x5tZAQs1VbwMjylWLlx6LA2Dmop1C4dwb+zH5SSJrYo5RKbc6DV1AmmRpeJ1NXkO30Z2Bq27U+h3uRUnMulPWSp1uTeLwc8LSFK49kTIaV0lwWNfDeb975aPmPac6kZP/5g5xgfB5/53/kC2KvHCbMUF8RotemD2ak+Lc0gzP7W/pcmbw/ZhxmdFJd5rPJz1lhGIOEZX6buFkcg3vjsBInd319vLO+ZSZmbU8m1ZryNsfLZ56tEvbafgCY1Jz/tP4UdKL6DZPyjCXC7oIEoCO3yn/yHOaFFQvOFizv2OnUPVW3ST+BN/TwkHUSZfE1+lKvjXJBsONeaiAa5ozLa2uI/ebx1caPFMjw0j62H23r0YFd0opsTw2ovlkvKcx3eoT
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Extract of a normal .avi files&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;RIFF,O
+AVI LIST�hdrlavih85�
+                    �&quot;�LISTtstrlstrh8vidscvid�&quot;�strf((�IV41JUNKLIST�;
+movi00db~
+���|
+��`��؝����@�|��@�P!����9���&amp;amp;��y��i��y���y��y&amp;gt;�����&amp;lt;��&amp;lt;��y���&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;��&amp;lt;ϲ&amp;lt;����&amp;lt;��&amp;lt;��&amp;lt;ϳ��&amp;lt;��&amp;lt;��&amp;lt;��(��&amp;lt;��&amp;lt;��,��&amp;lt;�S&amp;lt;��&amp;lt;��&amp;lt;��|��y��y&amp;gt;���&amp;lt;��&amp;lt;��&amp;lt;����|n��y��y���y&amp;gt;3��y��y��y�Qm&amp;lt;�� �Z�;d�����ߢS%����T��!~nV�&amp;amp;~RVG���(p&amp;amp;
+                                                                    ��۹+��$g�E���V���
+�q��b�Z0���I.B�k����X�+|dy:$�X1��9��'ҙ*�
+9�1d!��P�x����l�y&quot;d�m'a��#Ԏ&amp;amp;Z]�&quot;�%����fzڬ��q&quot;j�g�c�X�(�p��j��xs`�&amp;lt;Ĺg�R�$��pY�1�
+(
+ p6��� E	s	V�pɫ�Œ�vNaG�(q�9�����&quot;*���%
+                                                    
+                                                     �k�8mY��f�.&quot;s�8
+                                                                    �(WL�!&amp;lt;-|=_���C&amp;amp;�ďo�s8��nj��T	sh��YX�oB�B��(NᠱI��ib��8���Y\�'1A�.�B$t´pHfB&amp;lt;�9���A�n5Hf�R�D��
+                                                                                                                                                                      �g��9sVI���CsF!����2����S�Q�E�P��5Xj�txMF:�G�q�S��k�0N(3q]-��O�J��$��ID&amp;gt;��a�
+����c'                                                      A9��
+P@X
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Trying a bit more on these files, 2 of these “avi” files end in &lt;code class=&quot;highlighter-rouge&quot;&gt;=&lt;/code&gt; (&lt;code class=&quot;highlighter-rouge&quot;&gt;B.avi&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;jNjcj.avi&lt;/code&gt;), so I am definitely leaning more towards Base64. The file that doesn’t end in a &lt;code class=&quot;highlighter-rouge&quot;&gt;=&lt;/code&gt; (&lt;code class=&quot;highlighter-rouge&quot;&gt;alSLK.avi&lt;/code&gt;), I tried to append that to the top of the two files that do end in &lt;code class=&quot;highlighter-rouge&quot;&gt;=&lt;/code&gt; and then run &lt;code class=&quot;highlighter-rouge&quot;&gt;base64 -D -i [file] -o [file]&lt;/code&gt;, it created binary files (which seems like progress), but no luck in taking it apart. If anyone has any ideas here, feel free to reach out.&lt;/p&gt;
+
+&lt;p&gt;Malware Traffic Analysis noted another indicator that was identified through the analysis of the infected Word documents (&lt;code class=&quot;highlighter-rouge&quot;&gt;45[.]141[.]103[.]204&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;q68jaydon3t[.]com&lt;/code&gt;), which we don’t have. So while we see the traffic, it is all over TLS minus the initial DNS request so there’s not much we can do for that. The &lt;code class=&quot;highlighter-rouge&quot;&gt;ja3&lt;/code&gt; nor &lt;code class=&quot;highlighter-rouge&quot;&gt;ja3s&lt;/code&gt; hash was collected. I’m adding it to the artifacts below, but this would only be “known bad” if it was found through analysis of the document.&lt;/p&gt;
+
+&lt;h2 id=&quot;detection-logic&quot;&gt;Detection Logic&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/huntops-blue/detection-logic/blob/master/ursnif.md&quot;&gt;Additional analysis, modeling, and signatures (KQL and Yara)&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;artifacts&quot;&gt;Artifacts&lt;/h2&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;194[.]61[.]2[.]16
+95[.]169[.]181[.]35
+45[.]141[.]103[.]204 (found by Malware Traffic Analysis)
+8962cd86b47148840b6067c971ada128
+7e34d6e790707bcc862fd54c0129abfa
+40186e831cd2e9679ca725064d2ab0fb
+2b93fcafabab58a109fcbca4377cccda
+qr12s8ygy1[.]com
+lcdixieeoe[.]com
+q68jaydon3t[.]com (found by Malware Traffic Analysis)
+xubiz8[.]cab
+/khogpfyc8n/215z9urlgz[.]php
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Until next time, cheers and happy hunting!&lt;/p&gt;
+</description>
+                <pubDate>Mon, 24 Feb 2020 00:00:00 -0600</pubDate>
+                <link>http://localhost:4000/2020/02/24/ursnif.html</link>
+                <guid isPermaLink="true">http://localhost:4000/2020/02/24/ursnif.html</guid>
+                
+                <category>feed</category>
+                
+                
+            </item>
+        
+            <item>
+                <title>2/21/2020 - Trickbot gtag wescan23 Infection</title>
+                <author>Andrew D. Pease</author>
+                <description>&lt;h1 id=&quot;2212020---trickbot-gtag-wecan23-infection&quot;&gt;2/21/2020 - Trickbot gtag wecan23 Infection&lt;/h1&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.malware-traffic-analysis.net/2020/02/19/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://unit42.paloaltonetworks.com/trickbot-campaign-uses-fake-payroll-emails-to-conduct-phishing-attacks/&quot;&gt;Trickbot information stealer background&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.fireeye.com/blog/threat-research/2019/01/a-nasty-trick-from-credential-theft-malware-to-business-disruption.html&quot;&gt;gtag information stealer background&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Right out of the gate, the Suricata dashboard is telling us something is amiss.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-20-20-1.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s pop over to the Discover tab and see what we can ferret out. We’ll apply the &lt;code class=&quot;highlighter-rouge&quot;&gt;alert.signature exists&lt;/code&gt; filter and add &lt;code class=&quot;highlighter-rouge&quot;&gt;destination.ip&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;source.ip&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;alert.signature&lt;/code&gt;, and &lt;code class=&quot;highlighter-rouge&quot;&gt;alert.metadata.tag&lt;/code&gt; and, pretty maids, all in a row.&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Destination IP&lt;/th&gt;
+      &lt;th&gt;Source IP&lt;/th&gt;
+      &lt;th&gt;Signature&lt;/th&gt;
+      &lt;th&gt;Tag&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;195[.]123[.]220[.]154&lt;/td&gt;
+      &lt;td&gt;10.0.100.185&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 12&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;185[.]65[.]202[.]240&lt;/td&gt;
+      &lt;td&gt;10.0.100.185&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 8&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;190[.]214[.]13[.]2&lt;/td&gt;
+      &lt;td&gt;10.0.100.185&lt;/td&gt;
+      &lt;td&gt;ET CNC Feodo Tracker Reported CnC Server group 11&lt;/td&gt;
+      &lt;td&gt;Banking_Trojan&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;104[.]20[.]16[.]242&lt;/td&gt;
+      &lt;td&gt;10.0.100.185&lt;/td&gt;
+      &lt;td&gt;ET POLICY curl User-Agent Outbound&lt;/td&gt;
+      &lt;td&gt;-&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;104[.]20[.]16[.]242&lt;/td&gt;
+      &lt;td&gt;10.0.100.185&lt;/td&gt;
+      &lt;td&gt;ET POLICY IP Check Domain (icanhazip[.]com in HTTP Host)&lt;/td&gt;
+      &lt;td&gt;-&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Boom, we found the Trickbot TLS connections, but what about &lt;code class=&quot;highlighter-rouge&quot;&gt;wecan23&lt;/code&gt;?&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Note: As I dug through this, I found a lot of DNS traffic to blocklists (&lt;code class=&quot;highlighter-rouge&quot;&gt;cbl.abuseat[.]org&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;barracudacentral[.]org&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;uceprotect[.]net&lt;/code&gt;, etc.). While the victim (or the pcap sampler) seemingly use these lists, I excluded this as it’s not part of the infection.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;As we see in the the table above, &lt;code class=&quot;highlighter-rouge&quot;&gt;10.0.100.185&lt;/code&gt; seems to be infected. So let’s filter in on that IP address in Kibana.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-20-20-2.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s get rid of our known bad Destination IPs (above), the IP recon domains (&lt;code class=&quot;highlighter-rouge&quot;&gt;icanhazip&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;externalip.com&lt;/code&gt;), and see what is left over to see if there’s anything else we can find. I’m also going to drop the DNS server out (&lt;code class=&quot;highlighter-rouge&quot;&gt;10.0.100.2&lt;/code&gt;), while there’s good info there, we’ve got others to look at that might have more. If there’s nothing, we can do a DNS hunt.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-20-20-3.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Of interest, the connection between &lt;code class=&quot;highlighter-rouge&quot;&gt;10.0.100.185&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;192[.]3[.]124[.]40&lt;/code&gt; is over port &lt;code class=&quot;highlighter-rouge&quot;&gt;80&lt;/code&gt;, but there’s not a corresponding HTTP Zeek log, so we’ll have to use Docket to carve the PCAP and check it out in Wireshark.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-20-20-4.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;As we can see, the file name is &lt;code class=&quot;highlighter-rouge&quot;&gt;lastimg.png&lt;/code&gt;, but the file type metadata has a magic number of &lt;code class=&quot;highlighter-rouge&quot;&gt;MZ&lt;/code&gt;, which is a PE binary. Using &lt;code class=&quot;highlighter-rouge&quot;&gt;Export HTTP Objects&lt;/code&gt; in Wireshark, we can see there are 2 “png” files called &lt;code class=&quot;highlighter-rouge&quot;&gt;lastimg.png&lt;/code&gt; as well as &lt;code class=&quot;highlighter-rouge&quot;&gt;mini.png&lt;/code&gt;. We’ll carve those out and statically analyze them.&lt;/p&gt;
+
+&lt;p&gt;Using &lt;code class=&quot;highlighter-rouge&quot;&gt;exiftool&lt;/code&gt;, we can see some interesting info, mainly that the original file was called &lt;code class=&quot;highlighter-rouge&quot;&gt;002.exe&lt;/code&gt; and that the File Type is &lt;code class=&quot;highlighter-rouge&quot;&gt;Win32 EXE&lt;/code&gt;, not an image (truncated).&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;$ exiftool lastimg.png
+...
+File Name                       : lastimg.png
+File Type                       : Win32 EXE
+File Type Extension             : exe
+MIME Type                       : application/octet-stream
+Image File Characteristics      : Executable, 32-bit
+PE Type                         : PE32
+Original File Name              : 002.exe
+Product Name                    : 002.exe
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Let’s see what VirusTotal knows about these 2 files by searching their MD5 hashes &lt;a href=&quot;https://www.virustotal.com/gui/search/489eef73a1a5880f644f3b60267db7e8&quot;&gt;1&lt;/a&gt;&lt;a href=&quot;https://www.virustotal.com/gui/search/c1820b0685ea2c16a9da3efd2f3b58d9&quot;&gt;2&lt;/a&gt;…&lt;strong&gt;EVIL!&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Back to Kibana and see what else is there. As before, let’s get rid of our known bad and all we have left is &lt;code class=&quot;highlighter-rouge&quot;&gt;203[.]176[.]135[.]102&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-20-20-5.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Like before, it’s only Connection log stuff, so let’s carve the PCAP between &lt;code class=&quot;highlighter-rouge&quot;&gt;10.0.100.185&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;203[.]176[.]135[.]102&lt;/code&gt; and see what we find in Wireshark, which appears to be posting host IDs, running processes, usernames, workstation domain, etc. to a server &lt;code class=&quot;highlighter-rouge&quot;&gt;Cowboy&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2-20-20-6.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;There was a lot of this kind of data being uploaded; feel free to explore it on your own and…obfuscating all of this data is exhausting.&lt;/p&gt;
+
+&lt;h2 id=&quot;artifacts&quot;&gt;Artifacts&lt;/h2&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;203[.]176[.]135[.]102
+195[.]123[.]220[.]154
+185[.]65[.]202[.]240
+190[.]214[.]13[.]2
+192[.]3[.]124[.]40
+/wecan23/
+489eef73a1a5880f644f3b60267db7e
+c1820b0685ea2c16a9da3efd2f3b58d9
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Until next time, cheers and happy hunting!&lt;/p&gt;
+</description>
+                <pubDate>Fri, 21 Feb 2020 00:00:00 -0600</pubDate>
+                <link>http://localhost:4000/2020/02/21/trickbot.html</link>
+                <guid isPermaLink="true">http://localhost:4000/2020/02/21/trickbot.html</guid>
+                
+                <category>feed</category>
+                
+                
+            </item>
+        
+    </channel>
+</rss>
