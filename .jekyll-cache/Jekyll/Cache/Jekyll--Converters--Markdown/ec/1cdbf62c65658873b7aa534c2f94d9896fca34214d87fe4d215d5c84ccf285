@@ -1,0 +1,113 @@
+I"�<h1 id="2212020---trickbot-gtag-wecan23-infection">2/21/2020 - Trickbot gtag wecan23 Infection</h1>
+<ul>
+  <li><a href="https://www.malware-traffic-analysis.net/2020/02/19/index.html">Packets</a></li>
+  <li><a href="https://unit42.paloaltonetworks.com/trickbot-campaign-uses-fake-payroll-emails-to-conduct-phishing-attacks/">Trickbot information stealer background</a></li>
+  <li><a href="https://www.fireeye.com/blog/threat-research/2019/01/a-nasty-trick-from-credential-theft-malware-to-business-disruption.html">gtag information stealer background</a></li>
+</ul>
+
+<p>Right out of the gate, the Suricata dashboard is telling us something is amiss.</p>
+
+<p><img src="/images/2-20-20-1.png" alt="" /></p>
+
+<p>Let’s pop over to the Discover tab and see what we can ferret out. We’ll apply the <code class="highlighter-rouge">alert.signature exists</code> filter and add <code class="highlighter-rouge">destination.ip</code>, <code class="highlighter-rouge">source.ip</code>, <code class="highlighter-rouge">alert.signature</code>, and <code class="highlighter-rouge">alert.metadata.tag</code> and, pretty maids, all in a row.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Destination IP</th>
+      <th>Source IP</th>
+      <th>Signature</th>
+      <th>Tag</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>195[.]123[.]220[.]154</td>
+      <td>10.0.100.185</td>
+      <td>ET CNC Feodo Tracker Reported CnC Server group 12</td>
+      <td>Banking_Trojan</td>
+    </tr>
+    <tr>
+      <td>185[.]65[.]202[.]240</td>
+      <td>10.0.100.185</td>
+      <td>ET CNC Feodo Tracker Reported CnC Server group 8</td>
+      <td>Banking_Trojan</td>
+    </tr>
+    <tr>
+      <td>190[.]214[.]13[.]2</td>
+      <td>10.0.100.185</td>
+      <td>ET CNC Feodo Tracker Reported CnC Server group 11</td>
+      <td>Banking_Trojan</td>
+    </tr>
+    <tr>
+      <td>104[.]20[.]16[.]242</td>
+      <td>10.0.100.185</td>
+      <td>ET POLICY curl User-Agent Outbound</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>104[.]20[.]16[.]242</td>
+      <td>10.0.100.185</td>
+      <td>ET POLICY IP Check Domain (icanhazip[.]com in HTTP Host)</td>
+      <td>-</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Boom, we found the Trickbot TLS connections, but what about <code class="highlighter-rouge">wecan23</code>?</p>
+
+<p><em>Note: As I dug through this, I found a lot of DNS traffic to blocklists (<code class="highlighter-rouge">cbl.abuseat[.]org</code>, <code class="highlighter-rouge">barracudacentral[.]org</code>, <code class="highlighter-rouge">uceprotect[.]net</code>, etc.). While the victim (or the pcap sampler) seemingly use these lists, I excluded this as it’s not part of the infection.</em></p>
+
+<p>As we see in the the table above, <code class="highlighter-rouge">10.0.100.185</code> seems to be infected. So let’s filter in on that IP address in Kibana.</p>
+
+<p><img src="/images/2-20-20-2.png" alt="" /></p>
+
+<p>Let’s get rid of our known bad Destination IPs (above), the IP recon domains (<code class="highlighter-rouge">icanhazip</code> and <code class="highlighter-rouge">externalip.com</code>), and see what is left over to see if there’s anything else we can find. I’m also going to drop the DNS server out (<code class="highlighter-rouge">10.0.100.2</code>), while there’s good info there, we’ve got others to look at that might have more. If there’s nothing, we can do a DNS hunt.</p>
+
+<p><img src="/images/2-20-20-3.png" alt="" /></p>
+
+<p>Of interest, the connection between <code class="highlighter-rouge">10.0.100.185</code> and <code class="highlighter-rouge">192[.]3[.]124[.]40</code> is over port <code class="highlighter-rouge">80</code>, but there’s not a corresponding HTTP Zeek log, so we’ll have to use Docket to carve the PCAP and check it out in Wireshark.</p>
+
+<p><img src="/images/2-20-20-4.png" alt="" /></p>
+
+<p>As we can see, the file name is <code class="highlighter-rouge">lastimg.png</code>, but the file type metadata has a magic number of <code class="highlighter-rouge">MZ</code>, which is a PE binary. Using <code class="highlighter-rouge">Export HTTP Objects</code> in Wireshark, we can see there are 2 “png” files called <code class="highlighter-rouge">lastimg.png</code> as well as <code class="highlighter-rouge">mini.png</code>. We’ll carve those out and statically analyze them.</p>
+
+<p>Using <code class="highlighter-rouge">exiftool</code>, we can see some interesting info, mainly that the original file was called <code class="highlighter-rouge">002.exe</code> and that the File Type is <code class="highlighter-rouge">Win32 EXE</code>, not an image (truncated).</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ exiftool lastimg.png
+...
+File Name                       : lastimg.png
+File Type                       : Win32 EXE
+File Type Extension             : exe
+MIME Type                       : application/octet-stream
+Image File Characteristics      : Executable, 32-bit
+PE Type                         : PE32
+Original File Name              : 002.exe
+Product Name                    : 002.exe
+...
+</code></pre></div></div>
+
+<p>Let’s see what VirusTotal knows about these 2 files by searching their MD5 hashes <a href="https://www.virustotal.com/gui/search/489eef73a1a5880f644f3b60267db7e8">1</a><a href="https://www.virustotal.com/gui/search/c1820b0685ea2c16a9da3efd2f3b58d9">2</a>…<strong>EVIL!</strong>.</p>
+
+<p>Back to Kibana and see what else is there. As before, let’s get rid of our known bad and all we have left is <code class="highlighter-rouge">203[.]176[.]135[.]102</code>.</p>
+
+<p><img src="/images/2-20-20-5.png" alt="" /></p>
+
+<p>Like before, it’s only Connection log stuff, so let’s carve the PCAP between <code class="highlighter-rouge">10.0.100.185</code> and <code class="highlighter-rouge">203[.]176[.]135[.]102</code> and see what we find in Wireshark, which appears to be posting host IDs, running processes, usernames, workstation domain, etc. to a server <code class="highlighter-rouge">Cowboy</code>.</p>
+
+<p><img src="/images/2-20-20-6.png" alt="" /></p>
+
+<p>There was a lot of this kind of data being uploaded; feel free to explore it on your own and…obfuscating all of this data is exhausting.</p>
+
+<h2 id="artifacts">Artifacts</h2>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>203[.]176[.]135[.]102
+195[.]123[.]220[.]154
+185[.]65[.]202[.]240
+190[.]214[.]13[.]2
+192[.]3[.]124[.]40
+/wecan23/
+489eef73a1a5880f644f3b60267db7e
+c1820b0685ea2c16a9da3efd2f3b58d9
+</code></pre></div></div>
+
+<p>Until next time, cheers and happy hunting!</p>
+:ET

