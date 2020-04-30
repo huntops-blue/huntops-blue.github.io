@@ -1,9 +1,9 @@
 ---
 layout: default
-title: "4/30/2020 - Tuning Suricata"
+title: "4/30/2020 - Tuning Suricata for Gh0st RAT"
 tags: feed
 ---
-# 4/30/2020 - Tuning Suricata
+# 4/30/2020 - Tuning Suricata for Gh0st RAT
 No packets to share this time as this was from a real hunt op.
 
 I had a bit of a scare around a RAT and wanted to walk through the tuning process because I think it's a task for thrunters...if it *should* be a task for us is another story, but we need to eliminate noise on the fly, so it's an important skill.
