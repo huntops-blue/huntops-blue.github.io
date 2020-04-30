@@ -28,7 +28,7 @@ In digging in a bit more, I hopped over to Discover to see what was happening ar
 
 So, next I wanted to check the Suricata rule to see what exactly what happening. Expanding the event in Kibana showed me that the `rule.id` field was `2016922`. So let's look at that rule on the sensor to see what's going on.
 
-Here we can see that it's looking for the content `78 9c` (among other things).
+With [dcode](https://twitter.com/dcode)'s help, we can see that it's looking for the content `78 9c` (among other things).
 
 ```
 grep 2016922 /var/lib/suricata/rules/suricata.rules

@@ -5,8 +5,8 @@
         <description></description>
         <link>http://localhost:4000/</link>
         <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-        <pubDate>Thu, 30 Apr 2020 13:12:07 -0500</pubDate>
-        <lastBuildDate>Thu, 30 Apr 2020 13:12:07 -0500</lastBuildDate>
+        <pubDate>Thu, 30 Apr 2020 13:15:17 -0500</pubDate>
+        <lastBuildDate>Thu, 30 Apr 2020 13:15:17 -0500</lastBuildDate>
         <generator>Jekyll v4.0.0</generator>
         
             <item>
@@ -37,7 +37,7 @@
 
 &lt;p&gt;So, next I wanted to check the Suricata rule to see what exactly what happening. Expanding the event in Kibana showed me that the &lt;code class=&quot;highlighter-rouge&quot;&gt;rule.id&lt;/code&gt; field was &lt;code class=&quot;highlighter-rouge&quot;&gt;2016922&lt;/code&gt;. So let’s look at that rule on the sensor to see what’s going on.&lt;/p&gt;
 
-&lt;p&gt;Here we can see that it’s looking for the content &lt;code class=&quot;highlighter-rouge&quot;&gt;78 9c&lt;/code&gt; (among other things).&lt;/p&gt;
+&lt;p&gt;With &lt;a href=&quot;https://twitter.com/dcode&quot;&gt;dcode&lt;/a&gt;’s help, we can see that it’s looking for the content &lt;code class=&quot;highlighter-rouge&quot;&gt;78 9c&lt;/code&gt; (among other things).&lt;/p&gt;
 
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;grep 2016922 /var/lib/suricata/rules/suricata.rules
 
