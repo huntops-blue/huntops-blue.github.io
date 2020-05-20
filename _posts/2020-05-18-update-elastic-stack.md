@@ -29,6 +29,7 @@ Next, let's update the stack.
 ```
 sudo systemctl stop kibana filebeat logstash elasticsearch
 sudo yum update elasticsearch logstash filebeat kibana -y
+sudo systemctl daemon-reload
 sudo systemctl start elasticsearch logstash filebeat kibana
 ```
 
