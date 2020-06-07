@@ -56,6 +56,7 @@ Now that we've prepped the hypervisors, let's install ROCK.
 1. Select "Automated install of ROCK x.x.x-xxxx"
 1. Click on "USER CREATION", make sure you check the "Make this user administrator" box
 1. Type `c` to continue
+1. Type `sudo vi /etc/modules-load.d/dummy.conf`, put `dummy` in the file, `sudo reboot`
 1. Log in and type `sudo rock setup` to launch the Text User Interface (TUI)
 1. Navigate through the menu items, generally speaking, you can just use the defaults for the Interfaces, setting Management IP, Online or Offline, enable all components
 1. Write Config
