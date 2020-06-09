@@ -16,11 +16,7 @@ Do this to get started.
 # Installation
 Select the right hypervisor you're using.
 
-- [VMWare Fusion](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#vmware-fusion-installation-instructions)
-- [VirtualBox](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#virtualbox-installation-instructions)
-
 ## VMWare Fusion Installation Instructions
-If you're using VirtualBox, go to those [instructions](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#virtualbox-installation-instructions)
 
 1. Install VMWare Fusion
 1. Create a New virtual Machine
@@ -31,10 +27,8 @@ If you're using VirtualBox, go to those [instructions](https://github.com/huntop
 1. Click on "Processors & Memory", set 4 processor cores and `12288` MB
 1. Click on "Add Device", add another Network Adapter
 1. Click on "Hard Disk", move it to `50.00` GB or more
-1. Move onto [deploying ROCK](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#deploy-rock)
 
 ## VirtualBox Installation Instructions
-If you're using VMWare Fusion, go to those [instructions](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#vmware-fusion-installation-instructions)
 
 1. Install VirtualBox
 1. Create a New Virtual Machine, Type: "Linux", Version: "Red Hat (64-bit)"
@@ -46,8 +40,6 @@ If you're using VMWare Fusion, go to those [instructions](https://github.com/hun
 1. In Network, click on Adapter 1, click on Port Forwarding
 1. Add one for HTTPS, Host IP: `127.0.0.1`, Host Port: `4443`, Guest IP: `10.0.2.15`, Guest Port: `443`
 1. Add one for SSH, Host IP: `127.0.0.1`, Host Port: `2222`, Guest IP: `10.0.2.15`, Guest Port: `22`
-1. In Network, click on Adapter 2, enable it, and set it to "Internal Network"
-1. Move onto [deploying ROCK](https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#deploy-rock)
 
 # Deploy ROCK
 Now that we've prepped the hypervisors, let's install ROCK.
@@ -55,9 +47,10 @@ Now that we've prepped the hypervisors, let's install ROCK.
 1. Start the VM
 1. Select "Automated install of ROCK x.x.x-xxxx"
 1. Click on "USER CREATION", make sure you check the "Make this user administrator" box
-1. Type `c` to continue
+1. Once the installation is completed, type `c` to continue
+1. Create a dummy network interface to replay traffic across. `echo 'dummy' | sudo tee -a /etc/modules-load.d/dummy.conf $$ sudo reboot`
 1. Log in and type `sudo rock setup` to launch the Text User Interface (TUI)
-1. Navigate through the menu items, generally speaking, you can just use the defaults for the Interfaces, setting Management IP, Online or Offline, enable all components
+1. Navigate through the menu items, generally speaking, you can just use the defaults for the Interfaces, setting Management IP, Online or Offline (I recommend Online), enable all components
 1. Write Config
 1. Run Installer - this takes about 10 minutes
 
@@ -74,7 +67,7 @@ sudo tcpreplay -t -i [monitor interface] [file.pcap]
 *Note: the `-t` flag in `tcpreplay` will fire the traffic all at once and may overrun you network socket buffer and cause you to drop traffic. Remove the `-t` flag if you have this issue, but `tcpreplay` will run for as long as it took the pcap to be captured - so a 2 hour pcap will take 2 hours to replay.*
 
 # Logging into ROCK
-In the home directory of the user you created during the installation, there is a file called `KIBANA_CREDENTIALS.txt`. In there you'll find your username and passphrase.
+In the home directory of the user you created during the installation, there is a file called `KIBANA_CREDENTIALS.txt` in your home directory (`/home/your_username`). In there you'll find your username and passphrase.
 
 Browse to `https://ROCK_IP_ADDRESS` and use the Kibana credentials to log in.
 
