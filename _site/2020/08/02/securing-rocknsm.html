@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>8/02/2020 - Securing the Elastic Stack in RockNSM | HuntOps</title>
+<meta name="generator" content="Jekyll v4.0.0" />
+<meta property="og:title" content="8/02/2020 - Securing the Elastic Stack in RockNSM" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="8/02/2020 - Securing the Elastic Stack in RockNSM Packets Getting Data into ROCK" />
+<meta property="og:description" content="8/02/2020 - Securing the Elastic Stack in RockNSM Packets Getting Data into ROCK" />
+<link rel="canonical" href="http://localhost:4000/2020/08/02/securing-rocknsm.html" />
+<meta property="og:url" content="http://localhost:4000/2020/08/02/securing-rocknsm.html" />
+<meta property="og:site_name" content="HuntOps" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-08-02T00:00:00-05:00" />
+<script type="application/ld+json">
+{"url":"http://localhost:4000/2020/08/02/securing-rocknsm.html","headline":"8/02/2020 - Securing the Elastic Stack in RockNSM","description":"8/02/2020 - Securing the Elastic Stack in RockNSM Packets Getting Data into ROCK","dateModified":"2020-08-02T00:00:00-05:00","datePublished":"2020-08-02T00:00:00-05:00","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2020/08/02/securing-rocknsm.html"},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="/assets/js/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="/assets/css/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>HuntOps</h1>
+          <p></p>
+          <hr>
+        </div>
+
+        <h1 id="8022020---securing-the-elastic-stack-in-rocknsm">8/02/2020 - Securing the Elastic Stack in RockNSM</h1>
+<ul>
+  <li><a href="http://malware-traffic-analysis.net/2020/03/11/index.html">Packets</a></li>
+  <li><a href="https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock">Getting Data into ROCK</a></li>
+</ul>
+
+<p>As the Elastic Stack continues to release features for their Security App, they have enforced a requirement to have a secure configuration to take advantage of the finer points of this app; namely the <a href="https://www.elastic.co/guide/en/siem/guide/current/detection-engine-overview.html">Detection Engine</a>.</p>
+
+<p>Responding to multiple requests from the community, I wanted to drop a quick configuration guide on how to deploy the security configuration needed to allow access to the Detection Engine in the Security app (formerly the SIEM app).</p>
+
+<p><strong>Caveat:</strong> Click to PCAP (Docket) doesn’t work quite like it used to after you use this guide. It tries to send everything over port <code class="highlighter-rouge">5601</code>. We’re working on a fix to this, but for now, if you do this, you’ll need to remove the port when you’re running Docket.</p>
+
+<p>Additionally, <strong>you will have an outage while we’re configuring security, so plan accordingly.</strong></p>
+
+<p>Obviously, you need to have a ROCK deployment and I recommend having the most updated version of the Elastic Stack:</p>
+<ul>
+  <li><a href="https://huntops.blue/rock-install.html">ROCK Installation Guide</a></li>
+  <li><a href="https://huntops.blue/2020/05/18/update-elastic-stack.html">Updating the Elastic Stack</a></li>
+</ul>
+
+<p>Let’s check to make sure that the sensor is healthy with <code class="highlighter-rouge">rockctl status</code>. If you have any services that are in a <code class="highlighter-rouge">failed</code> state, try restarting them with <code class="highlighter-rouge">sudo systemctl restart [service]</code>. Of note, <code class="highlighter-rouge">STENOGRAPHER</code> will show itself as being <code class="highlighter-rouge">active (exited)</code>. This is normal. If you look down further, <code class="highlighter-rouge">STENOGRAPHER@[INTERFACE] active (running)</code> (in my case <code class="highlighter-rouge">DUMMY0</code>).</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>rockctl status
+ZEEK:
+    Active: active (running) since Sun 2020-08-02 13:56:10 UTC; 59s ago
+STENOGRAPHER:
+    Active: active (exited) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+DOCKET:
+    Active: active (running) since Sun 2020-08-02 13:55:38 UTC; 1min 31s ago
+SURICATA:
+    Active: active (running) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+ELASTICSEARCH:
+    Active: active (running) since Sun 2020-08-02 13:56:45 UTC; 24s ago
+KIBANA:
+    Active: active (running) since Sun 2020-08-02 13:55:37 UTC; 1min 32s ago
+ZOOKEEPER:
+    Active: active (running) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+KAFKA:
+    Active: active (running) since Sun 2020-08-02 13:55:43 UTC; 1min 26s ago
+LIGHTTPD:
+    Active: active (running) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+FSF:
+    Active: active (running) since Sun 2020-08-02 13:55:41 UTC; 1min 29s ago
+FILEBEAT:
+    Active: active (running) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+LOGSTASH:
+    Active: active (running) since Sun 2020-08-02 13:55:37 UTC; 1min 32s ago
+STENOGRAPHER@DUMMY0:
+    Active: active (running) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+DOCKET-CELERY-IO:
+    Active: active (running) since Sun 2020-08-02 13:55:37 UTC; 1min 32s ago
+DOCKET-CELERY-QUERY:
+    Active: active (running) since Sun 2020-08-02 13:55:37 UTC; 1min 32s ago
+</code></pre></div></div>
+<p>Next, we’re going to make some changes to Elasticsearch, Kibana, and Logstash.</p>
+
+<p><strong>Elasticsearch</strong></p>
+
+<p>Let’s check out to see what version we’re running by curling our system on the Elasticsearch port, <code class="highlighter-rouge">9200</code>.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl localhost:9200
+{
+  "name" : "rock-2-6",
+  "cluster_name" : "rocknsm",
+  "cluster_uuid" : "hSatkUXKS-uAT9ypnh1n8g",
+  "version" : {
+    "number" : "7.8.1",
+    "build_flavor" : "default",
+    "build_type" : "rpm",
+    "build_hash" : "b5ca9c58fb664ca8bf9e4057fc229b3396bf3a89",
+    "build_date" : "2020-07-21T16:40:44.668009Z",
+    "build_snapshot" : false,
+    "lucene_version" : "8.5.1",
+    "minimum_wire_compatibility_version" : "6.8.0",
+    "minimum_index_compatibility_version" : "6.0.0-beta1"
+  },
+  "tagline" : "You Know, for Search"
+}
+</code></pre></div></div>
+<p>We can see that we’re on <code class="highlighter-rouge">7.8.1</code>, which at the time of this writing, is the most current version.</p>
+
+<p>Next let’s make a change to the Elasticsearch configuration file and add the following to <code class="highlighter-rouge">/etc/elasticsearch/elasticsearch.yml</code> (remember to open this file w/<code class="highlighter-rouge">sudo</code>)</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>xpack.security.enabled: true
+xpack.security.authc.api_key.enabled: true
+</code></pre></div></div>
+<p>After you’ve made this change, restart Elasticsearch <code class="highlighter-rouge">sudo systemctl restart elasticsearch</code>.</p>
+
+<p>When Elasticsearch comes back up and we try to curl it again, we get a different response telling us we need to authenticate - we’re on the right track.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl localhost:9200 | jq
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   403  100   403    0     0  53497      0 --:--:-- --:--:-- --:--:-- 57571
+{
+  "error": {
+    "root_cause": [
+      {
+        "type": "security_exception",
+        "reason": "missing authentication credentials for REST request [/]",
+        "header": {
+          "WWW-Authenticate": [
+            "ApiKey",
+            "Basic realm=\"security\" charset=\"UTF-8\""
+          ]
+        }
+      }
+    ],
+    "type": "security_exception",
+    "reason": "missing authentication credentials for REST request [/]",
+    "header": {
+      "WWW-Authenticate": [
+        "ApiKey",
+        "Basic realm=\"security\" charset=\"UTF-8\""
+      ]
+    }
+  },
+  "status": 401
+}
+</code></pre></div></div>
+
+<p>Next we need to make come credential pairs.</p>
+
+<p>You can let Elasticsearch generate your own credential pairs OR you can set them yourself. If you prefer to let Elastisearch create the passphrases for you, just remove the <code class="highlighter-rouge">interactive</code> operator below.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo /usr/share/elasticsearch/bin/elasticsearch-setup-passwords interactive
+Initiating the setup of passwords for reserved users elastic,apm_system,kibana,kibana_system,logstash_system,beats_system,remote_monitoring_user.
+You will be prompted to enter passwords as the process progresses.
+Please confirm that you would like to continue [y/N]y
+
+Enter password for [elastic]:
+Reenter password for [elastic]:
+Enter password for [apm_system]:
+Reenter password for [apm_system]:
+Enter password for [kibana_system]:
+Reenter password for [kibana_system]:
+Enter password for [logstash_system]:
+Reenter password for [logstash_system]:
+Enter password for [beats_system]:
+Reenter password for [beats_system]:
+Enter password for [remote_monitoring_user]:
+Reenter password for [remote_monitoring_user]:
+Changed password for user [apm_system]
+Changed password for user [kibana_system]
+Changed password for user [kibana]
+Changed password for user [logstash_system]
+Changed password for user [beats_system]
+Changed password for user [remote_monitoring_user]
+Changed password for user [elastic]
+</code></pre></div></div>
+<p>The passphrases we need are <code class="highlighter-rouge">elastic</code>, <code class="highlighter-rouge">kibana_system</code>, and <code class="highlighter-rouge">logstash_system</code>.</p>
+
+<p><strong>Logstash</strong></p>
+
+<p>Let’s check out to see what version we’re running the following command:</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/usr/share/logstash/bin/logstash -V
+logstash 7.8.1
+</code></pre></div></div>
+<p>We can see that we’re on <code class="highlighter-rouge">7.8.1</code>, which at the time of this writing, is the most current version.</p>
+
+<p>We need to add the username and passphrases we created above to the Logstash configuration in <code class="highlighter-rouge">/etc/logstash/conf.d/logstash-9999-output-elasticsearch.conf</code> (remember to open this file w/<code class="highlighter-rouge">sudo</code>).</p>
+
+<p>For each block of <code class="highlighter-rouge">elasticsearch</code>, add the <code class="highlighter-rouge">user =&gt; elastic</code> and <code class="highlighter-rouge">password =&gt; </code> fields. There will be several.</p>
+
+<p>Example</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>output {
+  # Requires event module and category
+  if [event][module] and [event][category] {
+
+    # Requires event dataset
+    if [event][dataset] {
+      elasticsearch {
+                    hosts =&gt; ["127.0.0.1:9200"]
+                    user =&gt; elastic
+                    password =&gt; password
+                    index =&gt; "ecs-%{[event][module]}-%{[event][category]}-%{+YYYY.MM.dd}"
+          manage_template =&gt; false
+      }
+    }
+...
+</code></pre></div></div>
+
+<p>Next, go to <code class="highlighter-rouge">/etc/logstash/logstash.yml</code> and uncomment out (replace with the <code class="highlighter-rouge">logstash_system</code> passphrase you created)</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>xpack.monitoring.elasticsearch.username: "logstash_system"
+xpack.monitoring.elasticsearch.password: "password"
+</code></pre></div></div>
+
+<p>Let’s test your configuration</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo -u logstash -g logstash /usr/share/logstash/bin/logstash "--path.settings" "/etc/logstash" -t
+Configuration OK
+[2020-08-02T14:38:16,728][INFO ][logstash.runner] Using config.test_and_exit mode. Config Validation Result: OK. Exiting Logstash
+</code></pre></div></div>
+
+<p>Finally, let’s restart Logstash with <code class="highlighter-rouge">sudo systemctl restart logstash</code>.</p>
+
+<p><strong>Kibana</strong></p>
+
+<p>Let’s check out to see what version we’re running by curling Kibana’s API on port <code class="highlighter-rouge">5601</code>.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl -s http://localhost:5601/api/status | jq .version.number
+"7.8.1"
+</code></pre></div></div>
+<p>We can see that we’re on <code class="highlighter-rouge">7.8.1</code>, which at the time of this writing, is the most current version.</p>
+
+<p>Next let’s make a change to the Kibana configuration file and add the following to <code class="highlighter-rouge">/etc/kibana/kibana.yml</code> (remember to open this file w/<code class="highlighter-rouge">sudo</code>).</p>
+
+<p><strong>Note:</strong> <code class="highlighter-rouge">xpack.encryptedSavedObjects.encryptionKey</code> just needs to be a 32-bit value, anything will work. For <code class="highlighter-rouge">elasticsearch.password</code>, enter the passphrase you created (or Elasticsearch created for you) in the previous step.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>elasticsearch.username: "kibana_system"
+elasticsearch.password: "password"
+xpack.security.enabled: true
+xpack.encryptedSavedObjects.encryptionKey: "lkajsdflkjadfoijeoiwerjlkdflkjasdfl;kkjs"
+server.host: 0.0.0.0
+</code></pre></div></div>
+<p>After you’ve made this change, restart Kibana <code class="highlighter-rouge">sudo systemctl restart kibana</code>.</p>
+
+<p>While you wait for Kibana to come up, we need to make a change to the firewall to allow us to access Kibana over it’s native port of <code class="highlighter-rouge">5601</code>.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo firewall-cmd --add-port=5601/tcp --permanent
+sudo firewall-cmd --reload
+</code></pre></div></div>
+<p>Check to make sure you can get to Kibana in your browser <code class="highlighter-rouge">http://rock-ip:5601</code>.</p>
+
+<p><img src="/images/8-2-20-1.png" alt="" /></p>
+
+<p>From here you’ll log on with the username of <code class="highlighter-rouge">elastic</code> and the passphrase you created above for that account.</p>
+
+<p>Once you’re logged into Kibana, we need to make another user so that lighttpd doesn’t clash with Kibana - this is hacky, once we figure out a better way, we’ll update this.</p>
+
+<p>On the sensor, open <code class="highlighter-rouge">~/KIBANA_CREDS.README</code>, that has a username and passphrase, we’ll need that in a minute.</p>
+
+<ol>
+  <li>In Kibana, click on the Kibana Dock panel (hamburger menu in the top left)</li>
+  <li>Click on Stack Management</li>
+  <li>Click on Users</li>
+  <li>Create User</li>
+  <li>Name the user the <code class="highlighter-rouge">U</code> and the passphrase the <code class="highlighter-rouge">P</code> in <code class="highlighter-rouge">KIBANA_CREDS.README</code> - you’re creating a user in Kibana that has the same username and passphrase as the one in lighttpd</li>
+  <li>Give this user the role of <code class="highlighter-rouge">superuser</code></li>
+  <li>Log out and then log in with this account</li>
+</ol>
+
+<p><img src="/images/8-2-20-4.png" alt="" /></p>
+
+<p><strong>Test Data</strong></p>
+
+<p>Lets test the sample data listed at the top of the page and replay it to test everything (instructions at the top).</p>
+
+<p><img src="/images/8-2-20-2.png" alt="" /></p>
+
+<p><img src="/images/8-2-20-3.png" alt="" /></p>
+
+<p>Looks good, and happy hunting!</p>
+
+<p><strong>Closing Thoughts</strong></p>
+
+<p>If you’re looking for new detection rules, check out <a href="https://www.elastic.co/blog/elastic-security-opens-public-detection-rules-repo">Elastic’s public repository</a>. If you make a rule you like, please feel free to contribute it to the <a href="https://github.com/elastic/detection-rules">project</a>!</p>
+
+
+      </section>
+
+    </div>
+
+    
+      <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+        ga('create', 'UA-158770799-1', 'auto');
+        ga('send', 'pageview');
+      </script>
+    
+  </body>
+</html>
