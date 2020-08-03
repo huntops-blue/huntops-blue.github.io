@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>5/18/2020 - Update The Elastic Stack in ROCK | HuntOps</title>
+<meta name="generator" content="Jekyll v4.0.0" />
+<meta property="og:title" content="5/18/2020 - Update The Elastic Stack in ROCK" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="5/18/2020 - Update The Elastic Stack in ROCK Packets Getting Data into ROCK" />
+<meta property="og:description" content="5/18/2020 - Update The Elastic Stack in ROCK Packets Getting Data into ROCK" />
+<link rel="canonical" href="http://localhost:4000/2020/05/18/update-elastic-stack.html" />
+<meta property="og:url" content="http://localhost:4000/2020/05/18/update-elastic-stack.html" />
+<meta property="og:site_name" content="HuntOps" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-05-18T00:00:00-05:00" />
+<script type="application/ld+json">
+{"url":"http://localhost:4000/2020/05/18/update-elastic-stack.html","headline":"5/18/2020 - Update The Elastic Stack in ROCK","description":"5/18/2020 - Update The Elastic Stack in ROCK Packets Getting Data into ROCK","dateModified":"2020-05-18T00:00:00-05:00","datePublished":"2020-05-18T00:00:00-05:00","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2020/05/18/update-elastic-stack.html"},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/assets/css/style.css?v=">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="/assets/js/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="/assets/css/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>HuntOps</h1>
+          <p></p>
+          <hr>
+        </div>
+
+        <h1 id="5182020---update-the-elastic-stack-in-rock">5/18/2020 - Update The Elastic Stack in ROCK</h1>
+<ul>
+  <li><a href="http://malware-traffic-analysis.net/2020/03/11/index.html">Packets</a></li>
+  <li><a href="https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock">Getting Data into ROCK</a></li>
+</ul>
+
+<p>I am still digging out from some time away, but I wanted to drop a quick note on the process to update the Elastic Stack to 7.7, which includes a new Cases feature in the SIEM.</p>
+
+<p><img src="/images/5-18-20-1.png" alt="" /></p>
+
+<p>If you’re interested in the full release notes for <code class="highlighter-rouge">7.7.0</code>, you can check them out over <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/release-notes-7.7.0.html">here</a>, but I wanted to highlight the new <a href="https://www.elastic.co/guide/en/siem/guide/7.7/cases-overview.html">Cases feature.</a>. It’s still Beta, but it’s a good start and with Elastic’s aggressive release cycle, I expect this to mature rapidly.</p>
+
+<p>ROCK <code class="highlighter-rouge">2.5.1</code> comes with Elastic <code class="highlighter-rouge">7.6.0</code>, so while the ROCK project does the complete testing of <code class="highlighter-rouge">7.7.0</code> (which came out on May 13, 2020), we can do the update manually. First, get ROCK installed as <a href="https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md">documented here</a>. Next, let’s update the stack.</p>
+
+<p><em>Before we get started, yes I am a contributor to the ROCK project and I work for Elastic. I have only done limited testing with 7.7.0 and ROCK, so please don’t do this on a production system. I speak for neither project or company.</em></p>
+
+<p>Let’s enable the Elastic repo.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo vi /etc/yum.repos.d/elastic.repo
+# anywhere in the file
+enabled=1
+</code></pre></div></div>
+
+<p>Next, let’s update the stack.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo systemctl stop kibana filebeat logstash elasticsearch
+sudo yum update elasticsearch logstash filebeat kibana -y
+sudo systemctl daemon-reload
+sudo systemctl start elasticsearch logstash filebeat kibana
+</code></pre></div></div>
+
+<p>Let’s test to make sure the update worked with <code class="highlighter-rouge">curl localhost:9200</code> and you should see <code class="highlighter-rouge">7.7.0</code> as the new Elasticsearch version.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl localhost:9200
+{
+  "name" : "rock",
+  "cluster_name" : "rocknsm",
+  "cluster_uuid" : "OPJDLfhjRw2BlSJU-Q3Ydw",
+  "version" : {
+    "number" : "7.7.0",
+    "build_flavor" : "default",
+    "build_type" : "rpm",
+    "build_hash" : "81a1e9eda8e6183f5237786246f6dced26a10eaf",
+    "build_date" : "2020-05-12T02:01:37.602180Z",
+    "build_snapshot" : false,
+    "lucene_version" : "8.5.1",
+    "minimum_wire_compatibility_version" : "6.8.0",
+    "minimum_index_compatibility_version" : "6.0.0-beta1"
+  },
+  "tagline" : "You Know, for Search"
+}
+</code></pre></div></div>
+<p>Now that we’ve updated the stack, we can move on to explore Cases.</p>
+
+<p>For this, we can just use some packets from the Hancitor malware I discussed a bit ago (see the packets above).</p>
+
+<p>First, let’s get to the Network section of the SIEM, and then to the External Alerts. It’s a <em>bit</em> clunky to show how to get there with screenshots, but click on the SIEM app on the left, then Network, and then about 1/2 down the page, there’s the “External Alerts” tab (you may want to customize what is displayed in the External Alerts - I usually click on the hamburger menu and add <code class="highlighter-rouge">rule.description</code> at a minimum).</p>
+
+<p><img src="/images/5-18-20-2.png" alt="" /></p>
+
+<p><img src="/images/5-18-20-3.png" alt="" /></p>
+
+<p>Let’s grab one of the events, <code class="highlighter-rouge">ET MALWARE Fareit/Pony Downloader Checkin 2</code> and click and drag it onto the “Timeline” sidecar on the right-side of the screen. Click on the Timeline to open it, drop down the events, poke around, give it a name, etc.</p>
+
+<p><img src="/images/5-18-20-4.png" alt="" /></p>
+
+<p>Now that we have a Timeline event, let’s check out the Cases tab. Now, integration with 3rd party systems isn’t part of the Basic License, but you can still do some basic case management.</p>
+
+<p>Give the case a name, a few tags that make sense, and add the Timeline we just created. Of note, everything is in Markdown, so the syntax is standard and doesn’t have a sharp learning curve…not to mention sidestepping the formatting silliness you get when you copy/pasta into document editors.</p>
+
+<p><img src="/images/5-18-20-5.png" alt="" /></p>
+
+<p>Now you’ve got an open case and you can make notes. When you’re done, you can close the case.</p>
+
+<p><img src="/images/5-18-20-6.png" alt="" /></p>
+
+<p>Again, it’s still beta right now, so there is just basic functionality; but with Elastic releasing huge updates every 9-10 weeks, getting familiar with the basics will get you that much further along when the features start rolling in.</p>
+
+<p>Until next time, cheers and happy hunting!</p>
+
+
+      </section>
+
+    </div>
+
+    
+      <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+        ga('create', 'UA-158770799-1', 'auto');
+        ga('send', 'pageview');
+      </script>
+    
+  </body>
+</html>

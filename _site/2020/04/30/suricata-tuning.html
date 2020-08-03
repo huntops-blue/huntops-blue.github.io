@@ -5,19 +5,19 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
 <!-- Begin Jekyll SEO tag v2.6.1 -->
-<title>4/30/2020 - Tuning Suricata | HuntOps</title>
+<title>4/30/2020 - Tuning Suricata for Gh0st RAT | HuntOps</title>
 <meta name="generator" content="Jekyll v4.0.0" />
-<meta property="og:title" content="4/30/2020 - Tuning Suricata" />
+<meta property="og:title" content="4/30/2020 - Tuning Suricata for Gh0st RAT" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="4/30/2020 - Tuning Suricata No packets to share this time as this was from a real hunt op." />
-<meta property="og:description" content="4/30/2020 - Tuning Suricata No packets to share this time as this was from a real hunt op." />
+<meta name="description" content="4/30/2020 - Tuning Suricata for Gh0st RAT" />
+<meta property="og:description" content="4/30/2020 - Tuning Suricata for Gh0st RAT" />
 <link rel="canonical" href="http://localhost:4000/2020/04/30/suricata-tuning.html" />
 <meta property="og:url" content="http://localhost:4000/2020/04/30/suricata-tuning.html" />
 <meta property="og:site_name" content="HuntOps" />
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-04-30T00:00:00-05:00" />
 <script type="application/ld+json">
-{"url":"http://localhost:4000/2020/04/30/suricata-tuning.html","headline":"4/30/2020 - Tuning Suricata","description":"4/30/2020 - Tuning Suricata No packets to share this time as this was from a real hunt op.","dateModified":"2020-04-30T00:00:00-05:00","datePublished":"2020-04-30T00:00:00-05:00","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2020/04/30/suricata-tuning.html"},"@context":"https://schema.org"}</script>
+{"url":"http://localhost:4000/2020/04/30/suricata-tuning.html","headline":"4/30/2020 - Tuning Suricata for Gh0st RAT","description":"4/30/2020 - Tuning Suricata for Gh0st RAT","dateModified":"2020-04-30T00:00:00-05:00","datePublished":"2020-04-30T00:00:00-05:00","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2020/04/30/suricata-tuning.html"},"@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
     <link rel="stylesheet" href="/assets/css/style.css?v=">
@@ -48,10 +48,13 @@
           <hr>
         </div>
 
-        <h1 id="4302020---tuning-suricata">4/30/2020 - Tuning Suricata</h1>
+        <h1 id="4302020---tuning-suricata-for-gh0st-rat">4/30/2020 - Tuning Suricata for Gh0st RAT</h1>
+
+<p><em>5/6/2020 - Update: I have submitted this FP and correction suggestion to Emerging Threats</em></p>
+
 <p>No packets to share this time as this was from a real hunt op.</p>
 
-<p>I had a bit of a scare around a RAT and wanted to walk through the tuning process because I think it’s a task for thrunters…if it <em>should</em> be a task for us is another story.</p>
+<p>I had a bit of a scare around a RAT and wanted to walk through the tuning process because I think it’s a task for thrunters…if it <em>should</em> be a task for us is another story, but we need to eliminate noise on the fly, so it’s an important skill.</p>
 
 <p><img src="/images/thrunting-detection-engineering.png" alt="" /></p>
 
@@ -105,7 +108,7 @@ alert tcp $HOME_NET !80 -&gt; $EXTERNAL_NET [!5721,!5938] (msg:"ET TROJAN Backdo
 <p>Next we can check to make sure that the rule worked with <code class="highlighter-rouge">grep 2016922 /var/lib/suricata/rules/suricata.rules</code> and we should see <code class="highlighter-rouge">!135</code> added (<code class="highlighter-rouge">$EXTERNAL_NET [!5721,!5938,!135]</code>).</p>
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>alert tcp $HOME_NET !80 -&gt; $EXTERNAL_NET [!5721,!5938,!135] (msg:"ET TROJAN Backdoor family PCRat/Gh0st CnC traffic"; flow:to_server,established; dsize:&gt;11; content:"|78 9c|"; offset:8; byte_jump:4,-10,relative,little,from_beginning,post_offset -1; isdataat:!2,relative; content:!"PWHDR"; depth:5; metadata: former_category MALWARE; reference:url,www.securelist.com/en/descriptions/10155706/Trojan-GameThief.Win32.Magania.eogz; reference:url,www.microsoft.com/security/portal/Threat/Encyclopedia/Entry.aspx?Name=Backdoor%3AWin32%2FPcClient.ZR&amp;ThreatID=-2147325231; reference:url,labs.alienvault.com/labs/index.php/2012/new-macontrol-variant-targeting-uyghur-users-the-windows-version-using-gh0st-rat/; reference:url,www.infowar-monitor.net/2009/09/tracking-ghostnet-investigating-a-cyber-espionage-network/; reference:url,blogs.rsa.com/will-gragido/lions-at-the-watering-hole-the-voho-affair/; reference:url,www.norman.com/about_norman/press_center/news_archive/2012/the_many_faces_of_gh0st_rat/en; classtype:trojan-activity; sid:2016922; rev:14; metadata:affected_product Windows_XP_Vista_7_8_10_Server_32_64_Bit, attack_target Client_Endpoint, deployment Perimeter, tag PCRAT, tag Gh0st, tag RAT, signature_severity Critical, created_at 2013_04_23, malware_family Gh0st, malware_family PCRAT, updated_at 2019_08_06;)
 </code></pre></div></div>
-<p>Restart Suricata (<code class="highlighter-rouge">sudo systemctl restart suricata</code>) to pick up the new rules and you’re golden.</p>
+<p>Send Suricata a SIGHUP (<code class="highlighter-rouge">sudo systemctl kill -sHUP suricata.service</code>) to pick up the new rules and you’re golden.</p>
 
 <p><img src="/images/hulk-rule-tuning.jpg" alt="" /></p>
 

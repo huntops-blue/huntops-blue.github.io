@@ -5,17 +5,373 @@
         <description></description>
         <link>http://localhost:4000/</link>
         <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-        <pubDate>Thu, 30 Apr 2020 13:48:43 -0500</pubDate>
-        <lastBuildDate>Thu, 30 Apr 2020 13:48:43 -0500</lastBuildDate>
+        <pubDate>Sun, 02 Aug 2020 13:49:34 -0500</pubDate>
+        <lastBuildDate>Sun, 02 Aug 2020 13:49:34 -0500</lastBuildDate>
         <generator>Jekyll v4.0.0</generator>
         
             <item>
-                <title>4/30/2020 - Tuning Suricata</title>
+                <title>8/02/2020 - Securing the Elastic Stack in RockNSM</title>
                 <author>Andrew D. Pease</author>
-                <description>&lt;h1 id=&quot;4302020---tuning-suricata&quot;&gt;4/30/2020 - Tuning Suricata&lt;/h1&gt;
+                <description>&lt;h1 id=&quot;8022020---securing-the-elastic-stack-in-rocknsm&quot;&gt;8/02/2020 - Securing the Elastic Stack in RockNSM&lt;/h1&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;http://malware-traffic-analysis.net/2020/03/11/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock&quot;&gt;Getting Data into ROCK&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As the Elastic Stack continues to release features for their Security App, they have enforced a requirement to have a secure configuration to take advantage of the finer points of this app; namely the &lt;a href=&quot;https://www.elastic.co/guide/en/siem/guide/current/detection-engine-overview.html&quot;&gt;Detection Engine&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Responding to multiple requests from the community, I wanted to drop a quick configuration guide on how to deploy the security configuration needed to allow access to the Detection Engine in the Security app (formerly the SIEM app).&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Caveat:&lt;/strong&gt; Click to PCAP (Docket) doesn’t work quite like it used to after you use this guide. It tries to send everything over port &lt;code class=&quot;highlighter-rouge&quot;&gt;5601&lt;/code&gt;. We’re working on a fix to this, but for now, if you do this, you’ll need to remove the port when you’re running Docket.&lt;/p&gt;
+
+&lt;p&gt;Additionally, &lt;strong&gt;you will have an outage while we’re configuring security, so plan accordingly.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Obviously, you need to have a ROCK deployment and I recommend having the most updated version of the Elastic Stack:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://huntops.blue/rock-install.html&quot;&gt;ROCK Installation Guide&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://huntops.blue/2020/05/18/update-elastic-stack.html&quot;&gt;Updating the Elastic Stack&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Let’s check to make sure that the sensor is healthy with &lt;code class=&quot;highlighter-rouge&quot;&gt;rockctl status&lt;/code&gt;. If you have any services that are in a &lt;code class=&quot;highlighter-rouge&quot;&gt;failed&lt;/code&gt; state, try restarting them with &lt;code class=&quot;highlighter-rouge&quot;&gt;sudo systemctl restart [service]&lt;/code&gt;. Of note, &lt;code class=&quot;highlighter-rouge&quot;&gt;STENOGRAPHER&lt;/code&gt; will show itself as being &lt;code class=&quot;highlighter-rouge&quot;&gt;active (exited)&lt;/code&gt;. This is normal. If you look down further, &lt;code class=&quot;highlighter-rouge&quot;&gt;STENOGRAPHER@[INTERFACE] active (running)&lt;/code&gt; (in my case &lt;code class=&quot;highlighter-rouge&quot;&gt;DUMMY0&lt;/code&gt;).&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;rockctl status
+ZEEK:
+    Active: active (running) since Sun 2020-08-02 13:56:10 UTC; 59s ago
+STENOGRAPHER:
+    Active: active (exited) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+DOCKET:
+    Active: active (running) since Sun 2020-08-02 13:55:38 UTC; 1min 31s ago
+SURICATA:
+    Active: active (running) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+ELASTICSEARCH:
+    Active: active (running) since Sun 2020-08-02 13:56:45 UTC; 24s ago
+KIBANA:
+    Active: active (running) since Sun 2020-08-02 13:55:37 UTC; 1min 32s ago
+ZOOKEEPER:
+    Active: active (running) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+KAFKA:
+    Active: active (running) since Sun 2020-08-02 13:55:43 UTC; 1min 26s ago
+LIGHTTPD:
+    Active: active (running) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+FSF:
+    Active: active (running) since Sun 2020-08-02 13:55:41 UTC; 1min 29s ago
+FILEBEAT:
+    Active: active (running) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+LOGSTASH:
+    Active: active (running) since Sun 2020-08-02 13:55:37 UTC; 1min 32s ago
+STENOGRAPHER@DUMMY0:
+    Active: active (running) since Sun 2020-08-02 13:55:40 UTC; 1min 29s ago
+DOCKET-CELERY-IO:
+    Active: active (running) since Sun 2020-08-02 13:55:37 UTC; 1min 32s ago
+DOCKET-CELERY-QUERY:
+    Active: active (running) since Sun 2020-08-02 13:55:37 UTC; 1min 32s ago
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Next, we’re going to make some changes to Elasticsearch, Kibana, and Logstash.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Elasticsearch&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s check out to see what version we’re running by curling our system on the Elasticsearch port, &lt;code class=&quot;highlighter-rouge&quot;&gt;9200&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl localhost:9200
+{
+  &quot;name&quot; : &quot;rock-2-6&quot;,
+  &quot;cluster_name&quot; : &quot;rocknsm&quot;,
+  &quot;cluster_uuid&quot; : &quot;hSatkUXKS-uAT9ypnh1n8g&quot;,
+  &quot;version&quot; : {
+    &quot;number&quot; : &quot;7.8.1&quot;,
+    &quot;build_flavor&quot; : &quot;default&quot;,
+    &quot;build_type&quot; : &quot;rpm&quot;,
+    &quot;build_hash&quot; : &quot;b5ca9c58fb664ca8bf9e4057fc229b3396bf3a89&quot;,
+    &quot;build_date&quot; : &quot;2020-07-21T16:40:44.668009Z&quot;,
+    &quot;build_snapshot&quot; : false,
+    &quot;lucene_version&quot; : &quot;8.5.1&quot;,
+    &quot;minimum_wire_compatibility_version&quot; : &quot;6.8.0&quot;,
+    &quot;minimum_index_compatibility_version&quot; : &quot;6.0.0-beta1&quot;
+  },
+  &quot;tagline&quot; : &quot;You Know, for Search&quot;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;We can see that we’re on &lt;code class=&quot;highlighter-rouge&quot;&gt;7.8.1&lt;/code&gt;, which at the time of this writing, is the most current version.&lt;/p&gt;
+
+&lt;p&gt;Next let’s make a change to the Elasticsearch configuration file and add the following to &lt;code class=&quot;highlighter-rouge&quot;&gt;/etc/elasticsearch/elasticsearch.yml&lt;/code&gt; (remember to open this file w/&lt;code class=&quot;highlighter-rouge&quot;&gt;sudo&lt;/code&gt;)&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;xpack.security.enabled: true
+xpack.security.authc.api_key.enabled: true
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;After you’ve made this change, restart Elasticsearch &lt;code class=&quot;highlighter-rouge&quot;&gt;sudo systemctl restart elasticsearch&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;When Elasticsearch comes back up and we try to curl it again, we get a different response telling us we need to authenticate - we’re on the right track.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl localhost:9200 | jq
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   403  100   403    0     0  53497      0 --:--:-- --:--:-- --:--:-- 57571
+{
+  &quot;error&quot;: {
+    &quot;root_cause&quot;: [
+      {
+        &quot;type&quot;: &quot;security_exception&quot;,
+        &quot;reason&quot;: &quot;missing authentication credentials for REST request [/]&quot;,
+        &quot;header&quot;: {
+          &quot;WWW-Authenticate&quot;: [
+            &quot;ApiKey&quot;,
+            &quot;Basic realm=\&quot;security\&quot; charset=\&quot;UTF-8\&quot;&quot;
+          ]
+        }
+      }
+    ],
+    &quot;type&quot;: &quot;security_exception&quot;,
+    &quot;reason&quot;: &quot;missing authentication credentials for REST request [/]&quot;,
+    &quot;header&quot;: {
+      &quot;WWW-Authenticate&quot;: [
+        &quot;ApiKey&quot;,
+        &quot;Basic realm=\&quot;security\&quot; charset=\&quot;UTF-8\&quot;&quot;
+      ]
+    }
+  },
+  &quot;status&quot;: 401
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Next we need to make come credential pairs.&lt;/p&gt;
+
+&lt;p&gt;You can let Elasticsearch generate your own credential pairs OR you can set them yourself. If you prefer to let Elastisearch create the passphrases for you, just remove the &lt;code class=&quot;highlighter-rouge&quot;&gt;interactive&lt;/code&gt; operator below.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo /usr/share/elasticsearch/bin/elasticsearch-setup-passwords interactive
+Initiating the setup of passwords for reserved users elastic,apm_system,kibana,kibana_system,logstash_system,beats_system,remote_monitoring_user.
+You will be prompted to enter passwords as the process progresses.
+Please confirm that you would like to continue [y/N]y
+
+Enter password for [elastic]:
+Reenter password for [elastic]:
+Enter password for [apm_system]:
+Reenter password for [apm_system]:
+Enter password for [kibana_system]:
+Reenter password for [kibana_system]:
+Enter password for [logstash_system]:
+Reenter password for [logstash_system]:
+Enter password for [beats_system]:
+Reenter password for [beats_system]:
+Enter password for [remote_monitoring_user]:
+Reenter password for [remote_monitoring_user]:
+Changed password for user [apm_system]
+Changed password for user [kibana_system]
+Changed password for user [kibana]
+Changed password for user [logstash_system]
+Changed password for user [beats_system]
+Changed password for user [remote_monitoring_user]
+Changed password for user [elastic]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;The passphrases we need are &lt;code class=&quot;highlighter-rouge&quot;&gt;elastic&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;kibana_system&lt;/code&gt;, and &lt;code class=&quot;highlighter-rouge&quot;&gt;logstash_system&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Logstash&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s check out to see what version we’re running the following command:&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/usr/share/logstash/bin/logstash -V
+logstash 7.8.1
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;We can see that we’re on &lt;code class=&quot;highlighter-rouge&quot;&gt;7.8.1&lt;/code&gt;, which at the time of this writing, is the most current version.&lt;/p&gt;
+
+&lt;p&gt;We need to add the username and passphrases we created above to the Logstash configuration in &lt;code class=&quot;highlighter-rouge&quot;&gt;/etc/logstash/conf.d/logstash-9999-output-elasticsearch.conf&lt;/code&gt; (remember to open this file w/&lt;code class=&quot;highlighter-rouge&quot;&gt;sudo&lt;/code&gt;).&lt;/p&gt;
+
+&lt;p&gt;For each block of &lt;code class=&quot;highlighter-rouge&quot;&gt;elasticsearch&lt;/code&gt;, add the &lt;code class=&quot;highlighter-rouge&quot;&gt;user =&amp;gt; elastic&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;password =&amp;gt; &lt;/code&gt; fields. There will be several.&lt;/p&gt;
+
+&lt;p&gt;Example&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;output {
+  # Requires event module and category
+  if [event][module] and [event][category] {
+
+    # Requires event dataset
+    if [event][dataset] {
+      elasticsearch {
+                    hosts =&amp;gt; [&quot;127.0.0.1:9200&quot;]
+                    user =&amp;gt; elastic
+                    password =&amp;gt; password
+                    index =&amp;gt; &quot;ecs-%{[event][module]}-%{[event][category]}-%{+YYYY.MM.dd}&quot;
+          manage_template =&amp;gt; false
+      }
+    }
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Next, go to &lt;code class=&quot;highlighter-rouge&quot;&gt;/etc/logstash/logstash.yml&lt;/code&gt; and uncomment out (replace with the &lt;code class=&quot;highlighter-rouge&quot;&gt;logstash_system&lt;/code&gt; passphrase you created)&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;xpack.monitoring.elasticsearch.username: &quot;logstash_system&quot;
+xpack.monitoring.elasticsearch.password: &quot;password&quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Let’s test your configuration&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo -u logstash -g logstash /usr/share/logstash/bin/logstash &quot;--path.settings&quot; &quot;/etc/logstash&quot; -t
+Configuration OK
+[2020-08-02T14:38:16,728][INFO ][logstash.runner] Using config.test_and_exit mode. Config Validation Result: OK. Exiting Logstash
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Finally, let’s restart Logstash with &lt;code class=&quot;highlighter-rouge&quot;&gt;sudo systemctl restart logstash&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Kibana&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s check out to see what version we’re running by curling Kibana’s API on port &lt;code class=&quot;highlighter-rouge&quot;&gt;5601&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl -s http://localhost:5601/api/status | jq .version.number
+&quot;7.8.1&quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;We can see that we’re on &lt;code class=&quot;highlighter-rouge&quot;&gt;7.8.1&lt;/code&gt;, which at the time of this writing, is the most current version.&lt;/p&gt;
+
+&lt;p&gt;Next let’s make a change to the Kibana configuration file and add the following to &lt;code class=&quot;highlighter-rouge&quot;&gt;/etc/kibana/kibana.yml&lt;/code&gt; (remember to open this file w/&lt;code class=&quot;highlighter-rouge&quot;&gt;sudo&lt;/code&gt;).&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;xpack.encryptedSavedObjects.encryptionKey&lt;/code&gt; just needs to be a 32-bit value, anything will work. For &lt;code class=&quot;highlighter-rouge&quot;&gt;elasticsearch.password&lt;/code&gt;, enter the passphrase you created (or Elasticsearch created for you) in the previous step.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;elasticsearch.username: &quot;kibana_system&quot;
+elasticsearch.password: &quot;password&quot;
+xpack.security.enabled: true
+xpack.encryptedSavedObjects.encryptionKey: &quot;lkajsdflkjadfoijeoiwerjlkdflkjasdfl;kkjs&quot;
+server.host: 0.0.0.0
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;After you’ve made this change, restart Kibana &lt;code class=&quot;highlighter-rouge&quot;&gt;sudo systemctl restart kibana&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;While you wait for Kibana to come up, we need to make a change to the firewall to allow us to access Kibana over it’s native port of &lt;code class=&quot;highlighter-rouge&quot;&gt;5601&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo firewall-cmd --add-port=5601/tcp --permanent
+sudo firewall-cmd --reload
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Check to make sure you can get to Kibana in your browser &lt;code class=&quot;highlighter-rouge&quot;&gt;http://rock-ip:5601&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/8-2-20-1.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;From here you’ll log on with the username of &lt;code class=&quot;highlighter-rouge&quot;&gt;elastic&lt;/code&gt; and the passphrase you created above for that account.&lt;/p&gt;
+
+&lt;p&gt;Once you’re logged into Kibana, we need to make another user so that lighttpd doesn’t clash with Kibana - this is hacky, once we figure out a better way, we’ll update this.&lt;/p&gt;
+
+&lt;p&gt;On the sensor, open &lt;code class=&quot;highlighter-rouge&quot;&gt;~/KIBANA_CREDS.README&lt;/code&gt;, that has a username and passphrase, we’ll need that in a minute.&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;In Kibana, click on the Kibana Dock panel (hamburger menu in the top left)&lt;/li&gt;
+  &lt;li&gt;Click on Stack Management&lt;/li&gt;
+  &lt;li&gt;Click on Users&lt;/li&gt;
+  &lt;li&gt;Create User&lt;/li&gt;
+  &lt;li&gt;Name the user the &lt;code class=&quot;highlighter-rouge&quot;&gt;U&lt;/code&gt; and the passphrase the &lt;code class=&quot;highlighter-rouge&quot;&gt;P&lt;/code&gt; in &lt;code class=&quot;highlighter-rouge&quot;&gt;KIBANA_CREDS.README&lt;/code&gt; - you’re creating a user in Kibana that has the same username and passphrase as the one in lighttpd&lt;/li&gt;
+  &lt;li&gt;Give this user the role of &lt;code class=&quot;highlighter-rouge&quot;&gt;superuser&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;Log out and then log in with this account&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/8-2-20-4.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Test Data&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Lets test the sample data listed at the top of the page and replay it to test everything (instructions at the top).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/8-2-20-2.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/8-2-20-3.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Looks good, and happy hunting!&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Closing Thoughts&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;If you’re looking for new detection rules, check out &lt;a href=&quot;https://www.elastic.co/blog/elastic-security-opens-public-detection-rules-repo&quot;&gt;Elastic’s public repository&lt;/a&gt;. If you make a rule you like, please feel free to contribute it to the &lt;a href=&quot;https://github.com/elastic/detection-rules&quot;&gt;project&lt;/a&gt;!&lt;/p&gt;
+</description>
+                <pubDate>Sun, 02 Aug 2020 00:00:00 -0500</pubDate>
+                <link>http://localhost:4000/2020/08/02/securing-rocknsm.html</link>
+                <guid isPermaLink="true">http://localhost:4000/2020/08/02/securing-rocknsm.html</guid>
+                
+                <category>feed</category>
+                
+                
+            </item>
+        
+            <item>
+                <title>5/18/2020 - Update The Elastic Stack in ROCK</title>
+                <author>Andrew D. Pease</author>
+                <description>&lt;h1 id=&quot;5182020---update-the-elastic-stack-in-rock&quot;&gt;5/18/2020 - Update The Elastic Stack in ROCK&lt;/h1&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;http://malware-traffic-analysis.net/2020/03/11/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock&quot;&gt;Getting Data into ROCK&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;I am still digging out from some time away, but I wanted to drop a quick note on the process to update the Elastic Stack to 7.7, which includes a new Cases feature in the SIEM.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/5-18-20-1.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;If you’re interested in the full release notes for &lt;code class=&quot;highlighter-rouge&quot;&gt;7.7.0&lt;/code&gt;, you can check them out over &lt;a href=&quot;https://www.elastic.co/guide/en/elasticsearch/reference/current/release-notes-7.7.0.html&quot;&gt;here&lt;/a&gt;, but I wanted to highlight the new &lt;a href=&quot;https://www.elastic.co/guide/en/siem/guide/7.7/cases-overview.html&quot;&gt;Cases feature.&lt;/a&gt;. It’s still Beta, but it’s a good start and with Elastic’s aggressive release cycle, I expect this to mature rapidly.&lt;/p&gt;
+
+&lt;p&gt;ROCK &lt;code class=&quot;highlighter-rouge&quot;&gt;2.5.1&lt;/code&gt; comes with Elastic &lt;code class=&quot;highlighter-rouge&quot;&gt;7.6.0&lt;/code&gt;, so while the ROCK project does the complete testing of &lt;code class=&quot;highlighter-rouge&quot;&gt;7.7.0&lt;/code&gt; (which came out on May 13, 2020), we can do the update manually. First, get ROCK installed as &lt;a href=&quot;https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md&quot;&gt;documented here&lt;/a&gt;. Next, let’s update the stack.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Before we get started, yes I am a contributor to the ROCK project and I work for Elastic. I have only done limited testing with 7.7.0 and ROCK, so please don’t do this on a production system. I speak for neither project or company.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s enable the Elastic repo.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo vi /etc/yum.repos.d/elastic.repo
+# anywhere in the file
+enabled=1
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Next, let’s update the stack.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo systemctl stop kibana filebeat logstash elasticsearch
+sudo yum update elasticsearch logstash filebeat kibana -y
+sudo systemctl daemon-reload
+sudo systemctl start elasticsearch logstash filebeat kibana
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Let’s test to make sure the update worked with &lt;code class=&quot;highlighter-rouge&quot;&gt;curl localhost:9200&lt;/code&gt; and you should see &lt;code class=&quot;highlighter-rouge&quot;&gt;7.7.0&lt;/code&gt; as the new Elasticsearch version.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl localhost:9200
+{
+  &quot;name&quot; : &quot;rock&quot;,
+  &quot;cluster_name&quot; : &quot;rocknsm&quot;,
+  &quot;cluster_uuid&quot; : &quot;OPJDLfhjRw2BlSJU-Q3Ydw&quot;,
+  &quot;version&quot; : {
+    &quot;number&quot; : &quot;7.7.0&quot;,
+    &quot;build_flavor&quot; : &quot;default&quot;,
+    &quot;build_type&quot; : &quot;rpm&quot;,
+    &quot;build_hash&quot; : &quot;81a1e9eda8e6183f5237786246f6dced26a10eaf&quot;,
+    &quot;build_date&quot; : &quot;2020-05-12T02:01:37.602180Z&quot;,
+    &quot;build_snapshot&quot; : false,
+    &quot;lucene_version&quot; : &quot;8.5.1&quot;,
+    &quot;minimum_wire_compatibility_version&quot; : &quot;6.8.0&quot;,
+    &quot;minimum_index_compatibility_version&quot; : &quot;6.0.0-beta1&quot;
+  },
+  &quot;tagline&quot; : &quot;You Know, for Search&quot;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Now that we’ve updated the stack, we can move on to explore Cases.&lt;/p&gt;
+
+&lt;p&gt;For this, we can just use some packets from the Hancitor malware I discussed a bit ago (see the packets above).&lt;/p&gt;
+
+&lt;p&gt;First, let’s get to the Network section of the SIEM, and then to the External Alerts. It’s a &lt;em&gt;bit&lt;/em&gt; clunky to show how to get there with screenshots, but click on the SIEM app on the left, then Network, and then about 1/2 down the page, there’s the “External Alerts” tab (you may want to customize what is displayed in the External Alerts - I usually click on the hamburger menu and add &lt;code class=&quot;highlighter-rouge&quot;&gt;rule.description&lt;/code&gt; at a minimum).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/5-18-20-2.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/5-18-20-3.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Let’s grab one of the events, &lt;code class=&quot;highlighter-rouge&quot;&gt;ET MALWARE Fareit/Pony Downloader Checkin 2&lt;/code&gt; and click and drag it onto the “Timeline” sidecar on the right-side of the screen. Click on the Timeline to open it, drop down the events, poke around, give it a name, etc.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/5-18-20-4.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Now that we have a Timeline event, let’s check out the Cases tab. Now, integration with 3rd party systems isn’t part of the Basic License, but you can still do some basic case management.&lt;/p&gt;
+
+&lt;p&gt;Give the case a name, a few tags that make sense, and add the Timeline we just created. Of note, everything is in Markdown, so the syntax is standard and doesn’t have a sharp learning curve…not to mention sidestepping the formatting silliness you get when you copy/pasta into document editors.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/5-18-20-5.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Now you’ve got an open case and you can make notes. When you’re done, you can close the case.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/5-18-20-6.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Again, it’s still beta right now, so there is just basic functionality; but with Elastic releasing huge updates every 9-10 weeks, getting familiar with the basics will get you that much further along when the features start rolling in.&lt;/p&gt;
+
+&lt;p&gt;Until next time, cheers and happy hunting!&lt;/p&gt;
+</description>
+                <pubDate>Mon, 18 May 2020 00:00:00 -0500</pubDate>
+                <link>http://localhost:4000/2020/05/18/update-elastic-stack.html</link>
+                <guid isPermaLink="true">http://localhost:4000/2020/05/18/update-elastic-stack.html</guid>
+                
+                <category>feed</category>
+                
+                
+            </item>
+        
+            <item>
+                <title>4/30/2020 - Tuning Suricata for Gh0st RAT</title>
+                <author>Andrew D. Pease</author>
+                <description>&lt;h1 id=&quot;4302020---tuning-suricata-for-gh0st-rat&quot;&gt;4/30/2020 - Tuning Suricata for Gh0st RAT&lt;/h1&gt;
+
+&lt;p&gt;&lt;em&gt;5/6/2020 - Update: I have submitted this FP and correction suggestion to Emerging Threats&lt;/em&gt;&lt;/p&gt;
+
 &lt;p&gt;No packets to share this time as this was from a real hunt op.&lt;/p&gt;
 
-&lt;p&gt;I had a bit of a scare around a RAT and wanted to walk through the tuning process because I think it’s a task for thrunters…if it &lt;em&gt;should&lt;/em&gt; be a task for us is another story.&lt;/p&gt;
+&lt;p&gt;I had a bit of a scare around a RAT and wanted to walk through the tuning process because I think it’s a task for thrunters…if it &lt;em&gt;should&lt;/em&gt; be a task for us is another story, but we need to eliminate noise on the fly, so it’s an important skill.&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&quot;/images/thrunting-detection-engineering.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
 
@@ -69,7 +425,7 @@ alert tcp $HOME_NET !80 -&amp;gt; $EXTERNAL_NET [!5721,!5938] (msg:&quot;ET TROJ
 &lt;p&gt;Next we can check to make sure that the rule worked with &lt;code class=&quot;highlighter-rouge&quot;&gt;grep 2016922 /var/lib/suricata/rules/suricata.rules&lt;/code&gt; and we should see &lt;code class=&quot;highlighter-rouge&quot;&gt;!135&lt;/code&gt; added (&lt;code class=&quot;highlighter-rouge&quot;&gt;$EXTERNAL_NET [!5721,!5938,!135]&lt;/code&gt;).&lt;/p&gt;
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;alert tcp $HOME_NET !80 -&amp;gt; $EXTERNAL_NET [!5721,!5938,!135] (msg:&quot;ET TROJAN Backdoor family PCRat/Gh0st CnC traffic&quot;; flow:to_server,established; dsize:&amp;gt;11; content:&quot;|78 9c|&quot;; offset:8; byte_jump:4,-10,relative,little,from_beginning,post_offset -1; isdataat:!2,relative; content:!&quot;PWHDR&quot;; depth:5; metadata: former_category MALWARE; reference:url,www.securelist.com/en/descriptions/10155706/Trojan-GameThief.Win32.Magania.eogz; reference:url,www.microsoft.com/security/portal/Threat/Encyclopedia/Entry.aspx?Name=Backdoor%3AWin32%2FPcClient.ZR&amp;amp;ThreatID=-2147325231; reference:url,labs.alienvault.com/labs/index.php/2012/new-macontrol-variant-targeting-uyghur-users-the-windows-version-using-gh0st-rat/; reference:url,www.infowar-monitor.net/2009/09/tracking-ghostnet-investigating-a-cyber-espionage-network/; reference:url,blogs.rsa.com/will-gragido/lions-at-the-watering-hole-the-voho-affair/; reference:url,www.norman.com/about_norman/press_center/news_archive/2012/the_many_faces_of_gh0st_rat/en; classtype:trojan-activity; sid:2016922; rev:14; metadata:affected_product Windows_XP_Vista_7_8_10_Server_32_64_Bit, attack_target Client_Endpoint, deployment Perimeter, tag PCRAT, tag Gh0st, tag RAT, signature_severity Critical, created_at 2013_04_23, malware_family Gh0st, malware_family PCRAT, updated_at 2019_08_06;)
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;Restart Suricata (&lt;code class=&quot;highlighter-rouge&quot;&gt;sudo systemctl restart suricata&lt;/code&gt;) to pick up the new rules and you’re golden.&lt;/p&gt;
+&lt;p&gt;Send Suricata a SIGHUP (&lt;code class=&quot;highlighter-rouge&quot;&gt;sudo systemctl kill -sHUP suricata.service&lt;/code&gt;) to pick up the new rules and you’re golden.&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&quot;/images/hulk-rule-tuning.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
 </description>
@@ -88,6 +444,7 @@ alert tcp $HOME_NET !80 -&amp;gt; $EXTERNAL_NET [!5721,!5938] (msg:&quot;ET TROJ
                 <description>&lt;h1 id=&quot;3202020---hancitor-infection-wcoronavirus-themed-malspam&quot;&gt;3/20/2020 - Hancitor Infection w/Coronavirus Themed Malspam&lt;/h1&gt;
 &lt;ul&gt;
   &lt;li&gt;&lt;a href=&quot;http://malware-traffic-analysis.net/2020/03/11/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock&quot;&gt;Getting Data into ROCK&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://www.cyber.nj.gov/threat-profiles/trojan-variants/hancitor&quot;&gt;Hancitor Downloader background (AKA Chanitor)&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
@@ -386,6 +743,7 @@ shop[.]artaffinittee[.]com - Part of Hancitor infrastructure
                 <description>&lt;h1 id=&quot;362020---trickbot&quot;&gt;3/6/2020 - Trickbot&lt;/h1&gt;
 &lt;ul&gt;
   &lt;li&gt;&lt;a href=&quot;http://malware-traffic-analysis.net/2020/02/25/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock&quot;&gt;Getting Data into ROCK&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://unit42.paloaltonetworks.com/trickbot-campaign-uses-fake-payroll-emails-to-conduct-phishing-attacks/&quot;&gt;Trickbot information stealer background&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://www.fireeye.com/blog/threat-research/2019/01/a-nasty-trick-from-credential-theft-malware-to-business-disruption.html&quot;&gt;gtag information stealer background&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
@@ -643,6 +1001,7 @@ acf866d6a75d9100e03d71c80e1a85d6 - mini[.]png (Trickbot binaries)
                 <description>&lt;h1 id=&quot;2282020---qbot-qakbot&quot;&gt;2/28/2020 - Qbot (Qakbot)&lt;/h1&gt;
 &lt;ul&gt;
   &lt;li&gt;&lt;a href=&quot;http://malware-traffic-analysis.net/2020/01/29/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock&quot;&gt;Getting Data into ROCK&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://blog.talosintelligence.com/2019/05/qakbot-levels-up-with-new-obfuscation.html&quot;&gt;Qbot banking trojan background&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
@@ -781,6 +1140,7 @@ pop3[.]arcor[.]de (found by Malware Traffic Analysis)
                 <description>&lt;h1 id=&quot;2242020---ursnif&quot;&gt;2/24/2020 - Ursnif&lt;/h1&gt;
 &lt;ul&gt;
   &lt;li&gt;&lt;a href=&quot;http://malware-traffic-analysis.net/2020/02/11/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock&quot;&gt;Getting Data into ROCK&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://attack.mitre.org/software/S0386/&quot;&gt;Qbot banking trojan background&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
@@ -923,6 +1283,7 @@ xubiz8[.]cab
                 <description>&lt;h1 id=&quot;2212020---trickbot-gtag-wecan23-infection&quot;&gt;2/21/2020 - Trickbot gtag wecan23 Infection&lt;/h1&gt;
 &lt;ul&gt;
   &lt;li&gt;&lt;a href=&quot;https://www.malware-traffic-analysis.net/2020/02/19/index.html&quot;&gt;Packets&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/huntops-blue/huntops-blue.github.io/blob/master/rock-install.md#getting-data-into-rock&quot;&gt;Getting Data into ROCK&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://unit42.paloaltonetworks.com/trickbot-campaign-uses-fake-payroll-emails-to-conduct-phishing-attacks/&quot;&gt;Trickbot information stealer background&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://www.fireeye.com/blog/threat-research/2019/01/a-nasty-trick-from-credential-theft-malware-to-business-disruption.html&quot;&gt;gtag information stealer background&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
