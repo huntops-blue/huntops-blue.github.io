@@ -141,7 +141,7 @@ sudo systemctl restart logstash
 
 Wait a minute and then run either `rockctl status` or `systemctl status logstash`. What you're looking for is that it's been running more than a minute. If there are issues, Logstash just restarts without a whole lot of indication that it's not healthy.
 
-![](/images/8-17-20-5.png)
+![](/images/8-17-20-6.png)
 
 **Test Data**
 
