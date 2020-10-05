@@ -133,7 +133,7 @@ output {
 ```
 Save that configuration and then test Logstash w/`sudo -u logstash -g logstash /usr/share/logstash/bin/logstash "--path.settings" "/etc/logstash" -t` and, after a few minutes, you should see `Configuration OK`.
 
-Let's start Logstash and validate that everything is working as intended.
+Let's restart Logstash and validate that everything is working as intended.
 
 ```
 sudo systemctl restart logstash
